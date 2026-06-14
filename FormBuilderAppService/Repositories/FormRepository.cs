@@ -16,7 +16,7 @@ namespace FormBuilderAppService.Repositories
 
         private string GetConnectionString()
         {
-            return _configuration.GetConnectionString("RohitDotNET");
+            return _configuration.GetConnectionString("PracticeDB");
         }
 
         public List<Form> GetForms()
