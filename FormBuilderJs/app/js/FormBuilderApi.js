@@ -256,8 +256,27 @@ var FormBuilderApi = (function() {
      */
     function editForm(formId) {
         console.log('Edit form:', formId);
-        // TODO: Navigate to form builder with this form
-        alert('Edit form: ' + formId);
+        // Get the form details and redirect to builder
+        getFormById(formId, 
+            function(form) {
+                console.log('Form retrieved for editing:', form);
+                // Store form data in sessionStorage
+                sessionStorage.setItem('editingFormId', formId);
+                sessionStorage.setItem('editingFormData', JSON.stringify({
+                    formId: form.formId,
+                    formName: form.formName,
+                    formTitle: form.formTitle,
+                    formTags: form.formTags,
+                    formJson: form.formJson
+                }));
+                // Redirect to builder
+                window.location.href = 'index.html';
+            },
+            function(error) {
+                console.error('Failed to load form for editing:', error);
+                alert('Error loading form: ' + error);
+            }
+        );
     }
 
     /**
@@ -508,39 +527,3 @@ var FormBuilderApi = (function() {
 
 })();
 
-// Usage Examples (commented out):
-//
-// Get all forms
-// FormBuilderApi.getAllForms(
-//     function(forms) {
-//         console.log('All forms:', forms);
-//     },
-//     function(error, statusCode) {
-//         console.error('Failed to get forms:', error);
-//     }
-// );
-//
-// Get form by ID
-// FormBuilderApi.getFormById('550e8400-e29b-41d4-a716-446655440000',
-//     function(form) {
-//         console.log('Form:', form);
-//     },
-//     function(error, statusCode) {
-//         console.error('Failed to get form:', error);
-//     }
-// );
-//
-// Save a new form
-// FormBuilderApi.saveForm({
-//     formName: 'Contact Form',
-//     formTitle: 'Contact Us',
-//     formTags: 'contact,support',
-//     formJson: JSON.stringify({ data: 'form configuration' })
-// },
-//     function(response) {
-//         console.log('Form saved:', response);
-//     },
-//     function(error, statusCode) {
-//         console.error('Failed to save form:', error);
-//     }
-// );

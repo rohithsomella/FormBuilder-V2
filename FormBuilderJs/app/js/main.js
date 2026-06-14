@@ -11,6 +11,101 @@ let isSavingState = false;
 // Form details tracking
 let currentFormName = 'Untitled Form';
 let formTags = [];
+let formMetadata = {
+    title: '',
+    tags: [],
+    formKey: ''
+};
+
+//
+// Reusable function to load form JSON into builder
+//
+function loadFormJsonIntoBuilder(formJson) {
+    console.log('Loading form JSON into builder...');
+    console.log('Input schema:', formJson);
+    
+    try {
+        // Reset metadata for fresh start
+        formMetadata = {
+            title: '',
+            tags: [],
+            formKey: ''
+        };
+        
+        // Store original JSON for metadata extraction
+        let extractedFormMetadata = null;
+        
+        // Handle multiple JSON formats
+        if (formJson.forms && typeof formJson.forms === 'object' && !Array.isArray(formJson.forms)) {
+            console.log('Detected FormIO form definition with forms object');
+            const formsArray = Object.values(formJson.forms);
+            if (formsArray.length > 0) {
+                const firstForm = formsArray[0];
+                console.log('First form from object:', {
+                    title: firstForm.title,
+                    tags: firstForm.tags,
+                    hasComponents: !!firstForm.components
+                });
+                // Extract metadata from the forms node
+                extractedFormMetadata = {
+                    title: firstForm.title || '',
+                    tags: (firstForm.tags && Array.isArray(firstForm.tags)) ? firstForm.tags : [],
+                    formKey: Object.keys(formJson.forms)[0]
+                };
+                console.log('📋 Extracted form metadata:', extractedFormMetadata);
+                formJson = { components: firstForm.components || [] };
+            }
+        }
+        else if (formJson.forms && Array.isArray(formJson.forms) && formJson.forms.length > 0) {
+            console.log('Detected FormIO form definition with forms array');
+            const firstForm = formJson.forms[0];
+            console.log('First form from array:', {
+                title: firstForm.title,
+                tags: firstForm.tags,
+                hasComponents: !!firstForm.components
+            });
+            // Extract metadata from the forms node
+            extractedFormMetadata = {
+                title: firstForm.title || '',
+                tags: (firstForm.tags && Array.isArray(firstForm.tags)) ? firstForm.tags : [],
+                formKey: firstForm.name || ''
+            };
+            console.log('📋 Extracted form metadata:', extractedFormMetadata);
+            formJson = { components: firstForm.components || [] };
+        }
+        else if (formJson.type) {
+            console.log('Detected single component format');
+            if (formJson.components && Array.isArray(formJson.components)) {
+                formJson = { components: formJson.components };
+            } else {
+                formJson = { components: [formJson] };
+            }
+        }
+        else if (!formJson.components) {
+            console.log('No components found, creating empty schema');
+            formJson = { components: [] };
+        }
+
+        console.log('Final schema for builder:', {
+            componentCount: formJson.components ? formJson.components.length : 0,
+            hasComponents: !!formJson.components
+        });
+
+        // Store metadata to be used after builder loads
+        if (extractedFormMetadata) {
+            formMetadata = extractedFormMetadata;
+        }
+
+        return Formio.builder(
+            document.getElementById('builder'),
+            formJson
+        );
+    } catch (ex) {
+        console.error('Error loading form JSON:', ex);
+        alert('Invalid form JSON');
+        throw ex;
+    }
+}
 
 // Save form state to history
 const saveFormState = function() {
@@ -32,6 +127,86 @@ const saveFormState = function() {
         console.log('✓ Form state saved. History length:', formHistory.length, 'Index:', historyIndex);
     }
 };
+
+//
+// Populate form details from extracted metadata
+//
+function populateFormDetails() {
+    console.log('🔧 Populating form details from metadata...');
+    console.log('Current formTags:', formTags);
+    console.log('formMetadata:', formMetadata);
+    if (typeof $ === 'undefined') return;
+    
+    try {
+        // Only populate from metadata if not already set from editing data
+        if (!currentFormName || currentFormName === 'Untitled Form') {
+            if (formMetadata.title) {
+                console.log('Setting form name to:', formMetadata.title);
+                currentFormName = formMetadata.title;
+            }
+        }
+        
+        // Populate form name input
+        $('#formNameInput').val(currentFormName);
+        
+        // Merge tags: prioritize existing formTags, then add metadata tags
+        let tagsToDisplay = [];
+        
+        // Add existing formTags
+        if (formTags && Array.isArray(formTags) && formTags.length > 0) {
+            tagsToDisplay = formTags.slice(); // Copy existing tags
+            console.log('Using existing formTags:', tagsToDisplay);
+        }
+        
+        // Add metadata tags if not already present
+        if (formMetadata.tags && Array.isArray(formMetadata.tags) && formMetadata.tags.length > 0) {
+            console.log('Found metadata tags:', formMetadata.tags);
+            formMetadata.tags.forEach(function(metaTag) {
+                if (metaTag && !tagsToDisplay.includes(metaTag)) {
+                    tagsToDisplay.push(metaTag);
+                    console.log('Added metadata tag:', metaTag);
+                }
+            });
+        }
+        
+        // Update formTags with merged result
+        formTags = tagsToDisplay;
+        console.log('Final tags to render:', formTags);
+        
+        // Render tags
+        $('#tagContainer').empty();
+        if (formTags && formTags.length > 0) {
+            console.log('🏷️ Rendering', formTags.length, 'tags');
+            formTags.forEach(function(tag) {
+                const cleanTag = tag.trim();
+                if (cleanTag) {
+                    const tagEl = document.createElement('span');
+                    tagEl.className = 'tag-chip';
+                    const closeBtn = document.createElement('button');
+                    closeBtn.className = 'tag-remove';
+                    closeBtn.type = 'button';
+                    closeBtn.innerHTML = '&times;';
+                    
+                    tagEl.innerHTML = cleanTag;
+                    tagEl.appendChild(closeBtn);
+                    
+                    closeBtn.addEventListener('click', function(e) {
+                        e.preventDefault();
+                        formTags = formTags.filter(t => t.trim() !== cleanTag);
+                        tagEl.remove();
+                    });
+                    document.getElementById('tagContainer').appendChild(tagEl);
+                    console.log('✓ Tag rendered:', cleanTag);
+                }
+            });
+        } else {
+            console.log('No tags to render');
+        }
+        console.log('✓ Form details populated');
+    } catch (e) {
+        console.error('Error populating form details:', e);
+    }
+}
 
 // Undo functionality
 const performUndo = function() {
@@ -171,17 +346,62 @@ try {
     console.error('Error setting up undo/redo buttons:', err);
 }
 
-Formio.builder(
-    document.getElementById('builder'),
-    {}
-)
+// Check if we're editing a form from existingForms.html
+var initialFormSchema = {};
+var editingFormData = null;
+try {
+    const editingFormDataStr = sessionStorage.getItem('editingFormData');
+    console.log('📋 Checking editing form data... Found:', !!editingFormDataStr);
+    if (editingFormDataStr) {
+        editingFormData = JSON.parse(editingFormDataStr);
+        console.log('✏️ Loading form for editing:', editingFormData.formName);
+        
+        // Store the form name and tags from editing data
+        currentFormName = editingFormData.formName || 'Untitled Form';
+        const tagsString = editingFormData.formTags || '';
+        formTags = tagsString.split(',').filter(tag => tag.trim());
+        console.log('Tags from editing data:', {
+            raw: tagsString,
+            parsed: formTags,
+            count: formTags.length
+        });
+        
+        // Parse the formJson
+        if (editingFormData.formJson) {
+            try {
+                initialFormSchema = typeof editingFormData.formJson === 'string' 
+                    ? JSON.parse(editingFormData.formJson) 
+                    : editingFormData.formJson;
+                console.log('✓ Form JSON parsed successfully. Components:', initialFormSchema.components?.length || 0);
+            } catch (e) {
+                console.error('Error parsing form JSON:', e);
+                initialFormSchema = {};
+            }
+        }
+    } else {
+        console.log('🆕 No editing data found - starting with empty form');
+    }
+} catch (e) {
+    console.error('Error loading editing form data:', e);
+}
+
+// Initialize builder with the form (empty or from editing)
+loadFormJsonIntoBuilder(initialFormSchema)
 .then(function(builder){
-
     builderInstance = builder;
-
     console.log("Builder Loaded", builder);
 
-    // Save initial form state (empty form)
+    // Clear editing data from sessionStorage since form is now loaded
+    if (editingFormData) {
+        sessionStorage.removeItem('editingFormData');
+        sessionStorage.removeItem('editingFormId');
+        console.log('✓ Cleared editing form data from sessionStorage');
+    }
+
+    // Populate form details from extracted metadata
+    populateFormDetails();
+
+    // Save initial form state
     console.log('💾 Saving initial form state...');
     const initialSchema = builderInstance.schema;
     if (initialSchema) {
@@ -228,6 +448,10 @@ Formio.builder(
         }
     }, 200);
 
+})
+.catch(function(error) {
+    console.error('Error loading builder:', error);
+    alert('Error loading form builder');
 });
 
 //
@@ -419,9 +643,7 @@ try {
     const reader = new FileReader();
 
     reader.onload = function(event){
-
         try{
-
             let formJson = JSON.parse(event.target.result);
 
             console.log('Raw JSON loaded:', {
@@ -431,59 +653,13 @@ try {
                 formsKeys: formJson.forms ? Object.keys(formJson.forms).slice(0, 5) : []
             });
 
-            // Handle multiple JSON formats:
-            // 1. FormIO form definition: { "title": "...", "forms": {...} } - forms is an OBJECT
-            if (formJson.forms && typeof formJson.forms === 'object' && !Array.isArray(formJson.forms)) {
-                console.log('Detected FormIO form definition with forms object');
-                // Convert forms object to array and get first form
-                const formsArray = Object.values(formJson.forms);
-                console.log('Forms array length:', formsArray.length);
-                if (formsArray.length > 0) {
-                    const firstForm = formsArray[0];
-                    console.log('First form has components:', !!firstForm.components);
-                    formJson = {
-                        components: firstForm.components || []
-                    };
-                }
-            }
-            // 2. FormIO form definition: { "title": "...", "forms": [...] } - forms is an ARRAY
-            else if (formJson.forms && Array.isArray(formJson.forms) && formJson.forms.length > 0) {
-                console.log('Detected FormIO form definition with forms array');
-                const firstForm = formJson.forms[0];
-                console.log('First form has components:', !!firstForm.components);
-                formJson = {
-                    components: firstForm.components || []
-                };
-            }
-            // 3. FormIO single component
-            else if (formJson.type) {
-                console.log('Detected single component format');
-                if (formJson.components && Array.isArray(formJson.components)) {
-                    formJson = { components: formJson.components };
-                } else {
-                    formJson = { components: [formJson] };
-                }
-            }
-            // 4. Downloaded format or already correct
-            else if (!formJson.components) {
-                console.log('No components found, creating empty schema');
-                formJson = { components: [] };
-            }
-
-            console.log('Final schema for builder:', {
-                componentCount: formJson.components ? formJson.components.length : 0,
-                hasComponents: !!formJson.components
-            });
-
-            Formio.builder(
-                document.getElementById('builder'),
-                formJson
-            )
+            loadFormJsonIntoBuilder(formJson)
             .then(function(builder){
-
                 builderInstance = builder;
-
                 console.log("JSON Loaded successfully");
+                
+                // Populate form details from extracted metadata
+                populateFormDetails();
                 
                 // Save loaded form state to history
                 console.log('💾 Saving loaded JSON form state...');
@@ -502,18 +678,12 @@ try {
                         saveFormState();
                     });
                 }
-
             });
-
         }
         catch(ex){
-
             alert("Invalid JSON file");
-
             console.error(ex);
-
         }
-
     };
 
     reader.readAsText(file);
@@ -732,9 +902,44 @@ try {
             }
 
             console.log("Form saved:", formSchema);
-            // TODO: Implement backend save logic here
-            // Example: POST to /api/forms with formSchema
-            alert('Form saved successfully!');
+            
+            // Check if we're editing an existing form
+            var editingFormDataStr = sessionStorage.getItem('editingFormData');
+            if (editingFormDataStr) {
+                // Update existing form
+                try {
+                    var editingFormData = JSON.parse(editingFormDataStr);
+                    console.log('Updating existing form:', editingFormData.formId);
+                    
+                    var updateData = {
+                        formId: editingFormData.formId,
+                        formName: editingFormData.formName,
+                        formTitle: editingFormData.formTitle,
+                        formTags: editingFormData.formTags,
+                        formJson: JSON.stringify(formSchema)
+                    };
+                    
+                    FormBuilderApi.updateForm(updateData,
+                        function(response) {
+                            console.log('Form updated successfully:', response);
+                            alert('Form updated successfully!');
+                            // Clear the editing data from sessionStorage
+                            sessionStorage.removeItem('editingFormData');
+                            sessionStorage.removeItem('editingFormId');
+                        },
+                        function(error) {
+                            console.error('Error updating form:', error);
+                            alert('Error updating form: ' + error);
+                        }
+                    );
+                } catch (e) {
+                    console.error('Error parsing editing form data:', e);
+                    alert('Error updating form');
+                }
+            } else {
+                // Show form details modal for new form
+                $('#formDetailsModal').modal('show');
+            }
         });
     } else {
         console.log('Warning: saveBtn button not found');
@@ -851,9 +1056,23 @@ if (typeof $ !== 'undefined') {
                 .replace(/\s+/g, '');
             $('#formTitleInput').val(camelCase);
             
-            // Clear tags from previous session
+            // Repopulate tags from current formTags array
             $('#tagContainer').empty();
             $('#tagInput').val('');
+            console.log('🏷️ Rendering', formTags.length, 'tags in modal');
+            if (formTags && formTags.length > 0) {
+                formTags.forEach(function(tag) {
+                    const cleanTag = tag.trim();
+                    if (cleanTag) {
+                        $('#tagContainer').append(
+                            `<span class="tag-chip">
+                                ${cleanTag}
+                                <i class="bi bi-x tag-remove"></i>
+                            </span>`
+                        );
+                    }
+                });
+            }
             
             console.log('✓ Modal populated with form data');
             $('#formDetailsModal').modal('show');
