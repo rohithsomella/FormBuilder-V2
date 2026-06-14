@@ -295,8 +295,25 @@ var FormBuilderApi = (function() {
      */
     function copyForm(formId) {
         console.log('Copy form:', formId);
-        // TODO: Implement form copy functionality
-        alert('Copy form: ' + formId);
+        // Get the form and load schema only (without form details)
+        getFormById(formId, 
+            function(form) {
+                console.log('Form retrieved for copying:', form);
+                // Store only the form schema (JSON) in sessionStorage for copy mode
+                // Do NOT store formId, formName, formTitle, formTags - this prevents form details from populating
+                sessionStorage.setItem('copyingFormData', JSON.stringify({
+                    formJson: form.formJson
+                }));
+                sessionStorage.removeItem('editingFormId');
+                sessionStorage.removeItem('editingFormData');
+                // Redirect to builder
+                window.location.href = 'index.html';
+            },
+            function(error) {
+                console.error('Failed to load form for copying:', error);
+                alert('Error loading form: ' + error);
+            }
+        );
     }
 
     /**
@@ -416,16 +433,16 @@ var FormBuilderApi = (function() {
                 '<td>' + escapeHtml(form.formTitle || '') + '</td>' +
                 '<td>' + escapeHtml(form.formTags || '') + '</td>' +
                 '<td>' +
-                '<button class="btn btn-sm btn-primary" title="Edit" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-secondary" title="Copy" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-copy"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-info" title="Launch" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-info" title="Launch form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-box-arrow-up-right"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-danger" title="Delete" onclick="FormBuilderApi.deleteForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-danger" title="Delete form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.deleteForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-trash"></i>' +
                 '</button>' +
                 '</td>';

@@ -1,5 +1,29 @@
 ﻿console.log("Loaded:", Formio);
 
+// Initialize Bootstrap tooltips
+$(function() {
+    $('[data-toggle="tooltip"]').tooltip();
+    
+    // Reinitialize tooltips for dynamically created buttons
+    $(document).on('DOMNodeInserted', function() {
+        $('[data-toggle="tooltip"]').not('[data-toggle="tooltip"].bs-tooltip-auto').tooltip();
+    });
+    
+    // Watch for changes in formsTableBody (for existingForms.html) and reinitialize tooltips
+    var tableBody = document.getElementById('formsTableBody');
+    if (tableBody) {
+        var observer = new MutationObserver(function() {
+            $('[data-toggle="tooltip"]').tooltip('dispose');
+            $('[data-toggle="tooltip"]').tooltip();
+        });
+        
+        observer.observe(tableBody, {
+            childList: true,
+            subtree: true
+        });
+    }
+});
+
 let builderInstance = null;
 
 // Move history tracking OUTSIDE the Formio.builder callback
@@ -349,6 +373,8 @@ try {
 // Check if we're editing a form from existingForms.html
 var initialFormSchema = {};
 var editingFormData = null;
+var isCopyingForm = false;
+
 try {
     const editingFormDataStr = sessionStorage.getItem('editingFormData');
     console.log('📋 Checking editing form data... Found:', !!editingFormDataStr);
@@ -379,10 +405,32 @@ try {
             }
         }
     } else {
-        console.log('🆕 No editing data found - starting with empty form');
+        // Check for copy form data
+        const copyingFormDataStr = sessionStorage.getItem('copyingFormData');
+        console.log('📋 Checking copying form data... Found:', !!copyingFormDataStr);
+        if (copyingFormDataStr) {
+            const copyingFormData = JSON.parse(copyingFormDataStr);
+            console.log('📋 Loading form for copying (schema only)');
+            isCopyingForm = true;
+            
+            // Parse the formJson - but DON'T populate form details
+            if (copyingFormData.formJson) {
+                try {
+                    initialFormSchema = typeof copyingFormData.formJson === 'string' 
+                        ? JSON.parse(copyingFormData.formJson) 
+                        : copyingFormData.formJson;
+                    console.log('✓ Form JSON parsed successfully for copy. Components:', initialFormSchema.components?.length || 0);
+                } catch (e) {
+                    console.error('Error parsing form JSON for copy:', e);
+                    initialFormSchema = {};
+                }
+            }
+        } else {
+            console.log('🆕 No editing or copying data found - starting with empty form');
+        }
     }
 } catch (e) {
-    console.error('Error loading editing form data:', e);
+    console.error('Error loading form data:', e);
 }
 
 // Initialize builder with the form (empty or from editing)
@@ -391,15 +439,23 @@ loadFormJsonIntoBuilder(initialFormSchema)
     builderInstance = builder;
     console.log("Builder Loaded", builder);
 
-    // Clear editing data from sessionStorage since form is now loaded
+    // Clear editing/copying data from sessionStorage since form is now loaded
     if (editingFormData) {
         sessionStorage.removeItem('editingFormData');
         sessionStorage.removeItem('editingFormId');
         console.log('✓ Cleared editing form data from sessionStorage');
     }
+    if (isCopyingForm) {
+        sessionStorage.removeItem('copyingFormData');
+        console.log('✓ Cleared copying form data from sessionStorage');
+    }
 
-    // Populate form details from extracted metadata
-    populateFormDetails();
+    // Populate form details from extracted metadata (skip for copy operations)
+    if (!isCopyingForm) {
+        populateFormDetails();
+    } else {
+        console.log('⏭️ Skipping form details population for copy operation');
+    }
 
     // Save initial form state
     console.log('💾 Saving initial form state...');

@@ -20,7 +20,10 @@ CREATE TABLE dbo.Forms
 
     FormTags NVARCHAR(500) NULL,
 
-    FormJson NVARCHAR(MAX) NOT NULL
+    FormJson NVARCHAR(MAX) NOT NULL,
+
+    IsDeleted BIT NOT NULL
+        CONSTRAINT DF_Forms_IsDeleted DEFAULT (0)
 );
 GO
 
@@ -73,6 +76,7 @@ BEGIN
         FormTitle,
         FormTags
     FROM dbo.Forms
+    WHERE IsDeleted = 0
     ORDER BY FormName;
 END
 GO
@@ -97,6 +101,26 @@ BEGIN
         FormTags,
         FormJson
     FROM dbo.Forms
+    WHERE FormId = @FormId
+      AND IsDeleted = 0;
+END
+GO
+
+
+/*=========================================================
+    PROCEDURE : DeleteForm
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.DeleteForm
+(
+    @FormId UNIQUEIDENTIFIER
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Forms
+    SET IsDeleted = 1
     WHERE FormId = @FormId;
 END
 GO

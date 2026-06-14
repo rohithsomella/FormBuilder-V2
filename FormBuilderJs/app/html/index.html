@@ -22,7 +22,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 
 <div class="builder-navbar">
     <div class="header-left">
-        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" data-toggle="tooltip" data-placement="bottom" title="Menu">
             <i class="bi bi-list"></i>
         </button>
         <h2>Form Builder</h2>
@@ -35,7 +35,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
         value="Untitled Form"
         disabled>
 
-        <button class="edit-form-btn" title="Edit Name">
+        <button class="edit-form-btn" title="Edit Name" data-toggle="tooltip" data-placement="bottom">
             <i class="bi bi-pencil"></i>
         </button>
     </div>
@@ -62,33 +62,34 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 
 <div class="menu-buttons">
 
-    <button class="btn btn-light" id="newEdit" title="New">
+    <button class="btn btn-light" id="newEdit" title="New" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-file-earmark-plus"></i>
     </button>
 
     <button class="btn btn-light" id="openJson"
             title="Open JSON"
+            data-toggle="tooltip" data-placement="bottom"
             onclick="document.getElementById('jsonFile').click()">
         <i class="bi bi-folder2-open"></i>
     </button>
 
-    <button class="btn btn-light" id="downloadJson" title="Download">
+    <button class="btn btn-light" id="downloadJson" title="Download" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-download"></i>
     </button>
 
-    <button hidden class="btn btn-light" title="Import">
+    <button hidden class="btn btn-light" title="Import" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-upload"></i>
     </button>
 
-    <button class="btn btn-light" id="undoBtn" title="Undo">
+    <button class="btn btn-light" id="undoBtn" title="Undo" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-arrow-counterclockwise"></i>
     </button>
 
-    <button class="btn btn-light" id="redoBtn" title="Redo">
+    <button class="btn btn-light" id="redoBtn" title="Redo" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-arrow-clockwise"></i>
     </button>
 
-    <button hidden class="btn btn-light" title="Settings">
+    <button hidden class="btn btn-light" title="Settings" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-gear"></i>
     </button>
 
@@ -101,15 +102,15 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
     <span class="slider"></span>
 </label>
 
-    <button class="btn btn-success" id="previewForm" title="Preview">
+    <button class="btn btn-success" id="previewForm" title="Preview" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-eye"></i>
     </button>
 
-    <button hidden class="btn btn-success" id="previewForm" title="Preview">
+    <button hidden class="btn btn-success" id="previewForm" title="Preview" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-arrow-up-right-square"></i>
     </button>
 
-    <button class="btn btn-primary" id='saveBtn'title="Save">
+    <button class="btn btn-primary" id='saveBtn' title="Save" data-toggle="tooltip" data-placement="bottom">
         <i class="bi bi-floppy"></i>
     </button>
 
