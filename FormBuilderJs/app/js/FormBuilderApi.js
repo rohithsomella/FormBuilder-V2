@@ -197,37 +197,38 @@ var FormBuilderApi = (function() {
         var tableBody = document.getElementById('formsTableBody');
         var loadingMessage = document.getElementById('formsLoadingMessage');
         var formsTable = document.getElementById('formsTable');
+        var tableControls = document.getElementById('tableControls');
+        var paginationControls = document.getElementById('paginationControls');
 
         if (!tableBody || !loadingMessage || !formsTable) {
             console.error('Required table elements not found in DOM');
             return;
         }
 
-        tableBody.innerHTML = ''; // Clear existing rows
+        tableBody.innerHTML = '';
 
         if (!forms || forms.length === 0) {
             showNoFormsMessage('No forms available');
+            if (tableControls) tableControls.style.display = 'none';
+            if (paginationControls) paginationControls.style.display = 'none';
             return;
         }
 
+        // Store forms and initialize pagination
+        paginationState.allForms = forms;
+        paginationState.filteredForms = forms;
+        paginationState.currentPage = 1;
+        paginationState.currentPageSet = 1;
+
         loadingMessage.style.display = 'none';
         formsTable.style.display = 'table';
+        if (tableControls) tableControls.style.display = 'flex';
+        if (paginationControls) paginationControls.style.display = 'flex';
 
-        forms.forEach(function(form) {
-            var row = document.createElement('tr');
-            row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
-                '<td>' + escapeHtml(form.formTitle || '') + '</td>' +
-                '<td>' + escapeHtml(form.formTags || '') + '</td>' +
-                '<td>' +
-                '<button class="btn btn-sm btn-primary" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
-                '<i class="bi bi-pencil"></i> Edit' +
-                '</button> ' +
-                '<button class="btn btn-sm btn-info" onclick="FormBuilderApi.viewForm(\'' + form.formId + '\')">' +
-                '<i class="bi bi-eye"></i> View' +
-                '</button>' +
-                '</td>';
-            tableBody.appendChild(row);
-        });
+        // Initialize controls and display
+        initializeSearchAndFilter();
+        displayPaginatedForms();
+        renderPaginationControls();
     }
 
     /**
@@ -269,6 +270,225 @@ var FormBuilderApi = (function() {
         alert('View form: ' + formId);
     }
 
+    /**
+     * Copy form - duplicate an existing form
+     * @param {String} formId - The form ID to copy
+     */
+    function copyForm(formId) {
+        console.log('Copy form:', formId);
+        // TODO: Implement form copy functionality
+        alert('Copy form: ' + formId);
+    }
+
+    /**
+     * Launch form - open form in new window
+     * @param {String} formId - The form ID to launch
+     */
+    function launchForm(formId) {
+        console.log('Launch form:', formId);
+        // TODO: Implement form launch functionality
+        alert('Launch form: ' + formId);
+    }
+
+    /**
+     * Delete form - remove a form
+     * @param {String} formId - The form ID to delete
+     */
+    function deleteForm(formId) {
+        console.log('Delete form:', formId);
+        // TODO: Implement form delete functionality
+        alert('Delete form: ' + formId);
+    }
+
+    // Pagination state
+    var paginationState = {
+        allForms: [],
+        filteredForms: [],
+        currentPage: 1,
+        currentPageSet: 1,
+        itemsPerPage: 5,
+        pagesPerSet: 5
+    };
+
+    /**
+     * Initialize search and filter event listeners
+     */
+    function initializeSearchAndFilter() {
+        var searchInput = document.getElementById('searchInput');
+        var filterSelect = document.getElementById('filterSelect');
+
+        if (searchInput) {
+            searchInput.addEventListener('keyup', function() {
+                paginationState.currentPage = 1;
+                paginationState.currentPageSet = 1;
+                applyFiltersAndSearch();
+            });
+        }
+
+        if (filterSelect) {
+            filterSelect.addEventListener('change', function() {
+                paginationState.currentPage = 1;
+                paginationState.currentPageSet = 1;
+                applyFiltersAndSearch();
+            });
+        }
+    }
+
+    /**
+     * Apply filters and search to forms
+     */
+    function applyFiltersAndSearch() {
+        var searchInput = document.getElementById('searchInput');
+        var filterSelect = document.getElementById('filterSelect');
+        var searchTerm = searchInput ? searchInput.value.toLowerCase() : '';
+        var sortBy = filterSelect ? filterSelect.value : '';
+
+        // Filter by search term
+        paginationState.filteredForms = paginationState.allForms.filter(function(form) {
+            var name = (form.formName || '').toLowerCase();
+            var title = (form.formTitle || '').toLowerCase();
+            var tags = (form.formTags || '').toLowerCase();
+            return name.includes(searchTerm) || title.includes(searchTerm) || tags.includes(searchTerm);
+        });
+
+        // Sort forms
+        if (sortBy === 'name-asc') {
+            paginationState.filteredForms.sort(function(a, b) {
+                return (a.formName || '').localeCompare(b.formName || '');
+            });
+        } else if (sortBy === 'name-desc') {
+            paginationState.filteredForms.sort(function(a, b) {
+                return (b.formName || '').localeCompare(a.formName || '');
+            });
+        } else if (sortBy === 'date-desc') {
+            paginationState.filteredForms.sort(function(a, b) {
+                return new Date(b.createdDate || 0) - new Date(a.createdDate || 0);
+            });
+        } else if (sortBy === 'date-asc') {
+            paginationState.filteredForms.sort(function(a, b) {
+                return new Date(a.createdDate || 0) - new Date(b.createdDate || 0);
+            });
+        }
+
+        displayPaginatedForms();
+        renderPaginationControls();
+    }
+
+    /**
+     * Display forms for current page
+     */
+    function displayPaginatedForms() {
+        var tableBody = document.getElementById('formsTableBody');
+        var formsTable = document.getElementById('formsTable');
+
+        if (!tableBody || !formsTable) {
+            return;
+        }
+
+        tableBody.innerHTML = '';
+
+        var startIndex = (paginationState.currentPage - 1) * paginationState.itemsPerPage;
+        var endIndex = startIndex + paginationState.itemsPerPage;
+        var pageItems = paginationState.filteredForms.slice(startIndex, endIndex);
+
+        pageItems.forEach(function(form) {
+            var row = document.createElement('tr');
+            row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
+                '<td>' + escapeHtml(form.formTitle || '') + '</td>' +
+                '<td>' + escapeHtml(form.formTags || '') + '</td>' +
+                '<td>' +
+                '<button class="btn btn-sm btn-primary" title="Edit" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
+                '<i class="bi bi-pencil"></i>' +
+                '</button> ' +
+                '<button class="btn btn-sm btn-secondary" title="Copy" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
+                '<i class="bi bi-copy"></i>' +
+                '</button> ' +
+                '<button class="btn btn-sm btn-info" title="Launch" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
+                '<i class="bi bi-box-arrow-up-right"></i>' +
+                '</button> ' +
+                '<button class="btn btn-sm btn-danger" title="Delete" onclick="FormBuilderApi.deleteForm(\'' + form.formId + '\')">' +
+                '<i class="bi bi-trash"></i>' +
+                '</button>' +
+                '</td>';
+            tableBody.appendChild(row);
+        });
+
+        formsTable.style.display = 'table';
+    }
+
+    /**
+     * Render pagination controls
+     */
+    function renderPaginationControls() {
+        var totalPages = Math.ceil(paginationState.filteredForms.length / paginationState.itemsPerPage);
+        var pageNumbersDiv = document.getElementById('pageNumbers');
+        var nextPageBtn = document.getElementById('nextPageBtn');
+        var prevPageBtn = document.getElementById('prevPageBtn');
+        var paginationInfo = document.getElementById('paginationInfo');
+
+        if (!pageNumbersDiv) {
+            return;
+        }
+
+        pageNumbersDiv.innerHTML = '';
+
+        var startPage = (paginationState.currentPageSet - 1) * paginationState.pagesPerSet + 1;
+        var endPage = Math.min(startPage + paginationState.pagesPerSet - 1, totalPages);
+
+        for (var i = startPage; i <= endPage; i++) {
+            var btn = document.createElement('button');
+            btn.className = 'page-btn' + (i === paginationState.currentPage ? ' active' : '');
+            btn.textContent = i;
+            btn.onclick = function(page) {
+                return function() {
+                    paginationState.currentPage = page;
+                    displayPaginatedForms();
+                    renderPaginationControls();
+                };
+            }(i);
+            pageNumbersDiv.appendChild(btn);
+        }
+
+        if (prevPageBtn) {
+            prevPageBtn.style.display = startPage > 1 ? 'inline-block' : 'none';
+            prevPageBtn.disabled = startPage <= 1;
+        }
+
+        if (nextPageBtn) {
+            nextPageBtn.style.display = endPage < totalPages ? 'inline-block' : 'none';
+        }
+
+        if (paginationInfo) {
+            paginationInfo.textContent = 'Page ' + paginationState.currentPage + ' of ' + totalPages;
+        }
+    }
+
+    /**
+     * Go to previous page set
+     */
+    function previousPage() {
+        if (paginationState.currentPageSet > 1) {
+            paginationState.currentPageSet--;
+            paginationState.currentPage = (paginationState.currentPageSet - 1) * paginationState.pagesPerSet + 1;
+            displayPaginatedForms();
+            renderPaginationControls();
+        }
+    }
+
+    /**
+     * Go to next page set
+     */
+    function nextPage() {
+        var totalPages = Math.ceil(paginationState.filteredForms.length / paginationState.itemsPerPage);
+        var maxPageSet = Math.ceil(totalPages / paginationState.pagesPerSet);
+        if (paginationState.currentPageSet < maxPageSet) {
+            paginationState.currentPageSet++;
+            paginationState.currentPage = (paginationState.currentPageSet - 1) * paginationState.pagesPerSet + 1;
+            displayPaginatedForms();
+            renderPaginationControls();
+        }
+    }
+
     // Public API
     return {
         getAllForms: getAllForms,
@@ -278,6 +498,11 @@ var FormBuilderApi = (function() {
         loadFormsTable: loadFormsTable,
         editForm: editForm,
         viewForm: viewForm,
+        copyForm: copyForm,
+        launchForm: launchForm,
+        deleteForm: deleteForm,
+        previousPage: previousPage,
+        nextPage: nextPage,
         config: config
     };
 
