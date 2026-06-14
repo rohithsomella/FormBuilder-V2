@@ -8,6 +8,10 @@ let formHistory = [];
 let historyIndex = -1;
 let isSavingState = false;
 
+// Form details tracking
+let currentFormName = 'Untitled Form';
+let formTags = [];
+
 // Save form state to history
 const saveFormState = function() {
     if (isSavingState || !builderInstance) {
@@ -246,6 +250,22 @@ try {
                         // Reset builder and history
                         formHistory = [];
                         historyIndex = -1;
+                        
+                        // Reset form details
+                        if (typeof $ !== 'undefined') {
+                            console.log('🧹 Clearing form details...');
+                            currentFormName = 'Untitled Form';
+                            formTags = [];
+                            $('#formNameInput').val('');
+                            $('#formTitleInput').val('');
+                            $('#tagContainer').empty();
+                            $('#tagInput').val('');
+                            console.log('✓ Form details cleared');
+                        }
+                        
+                        // Reset the form name in navbar
+                        $('.form-name-input').val('Untitled Form');
+                        console.log('✓ Navbar form name reset to "Untitled Form"');
                         
                         // Reset builder
                         Formio.builder(
@@ -668,7 +688,7 @@ try {
     overlay.appendChild(modal);
     document.body.appendChild(overlay);
 
-    // Load form using existing Formio object
+    // Load form using existing Formio object   
     Formio.createForm(formContainer, formSchema)
         .then(function(form) {
             console.log('Form preview loaded successfully in modal');
@@ -809,10 +829,35 @@ try {
 }
 
 // Form Details Modal - Wait for jQuery to be available
+console.log('=== Checking jQuery availability ===');
+console.log('typeof $:', typeof $);
+console.log('jQuery available:', typeof $ !== 'undefined');
+
 if (typeof $ !== 'undefined') {
     try {
+        console.log('✓ jQuery is available, initializing modal...');
+
         $('.edit-form-btn').click(function () {
+            console.log('✓✓ Edit button clicked!');
+            // Populate modal with current form name
+            $('#formNameInput').val(currentFormName);
+            // Generate camelCase automatically
+            let camelCase = currentFormName
+                .toLowerCase()
+                .replace(/(?:^\w|[A-Z]|\b\w)/g,
+                    (word, index) => index === 0
+                        ? word.toLowerCase()
+                        : word.toUpperCase())
+                .replace(/\s+/g, '');
+            $('#formTitleInput').val(camelCase);
+            
+            // Clear tags from previous session
+            $('#tagContainer').empty();
+            $('#tagInput').val('');
+            
+            console.log('✓ Modal populated with form data');
             $('#formDetailsModal').modal('show');
+            console.log('✓ Modal opened');
         });
 
         $('#formNameInput').on('input', function () {
@@ -830,8 +875,6 @@ if (typeof $ !== 'undefined') {
             $('#formTitleInput').val(camelCase);
         });
 
-        const tags = [];
-
         $('#tagInput').keydown(function (e) {
 
             if (e.key === ' ') {
@@ -846,7 +889,7 @@ if (typeof $ !== 'undefined') {
                 if (!tag)
                     return;
 
-                tags.push(tag);
+                formTags.push(tag);
 
                 $('#tagContainer').append(
                     `<span class="tag-chip">
@@ -862,7 +905,40 @@ if (typeof $ !== 'undefined') {
         $(document).on('click', '.tag-remove', function () {
 
             $(this).parent().remove();
+            // Also remove from formTags array
+            const tagText = $(this).parent().text().trim();
+            const index = formTags.indexOf(tagText);
+            if (index > -1) {
+                formTags.splice(index, 1);
+            }
 
+        });
+
+        // Save Form Details Button Handler
+        $('#saveFormDetails').click(function () {
+            const newFormName = $('#formNameInput').val().trim();
+            
+            if (!newFormName) {
+                alert('Form name cannot be empty');
+                return;
+            }
+            
+            // Update the current form name
+            currentFormName = newFormName;
+            
+            // Update the form name in the navbar
+            $('.form-name-input').val(newFormName);
+            
+            console.log('✓ Form details saved:', {
+                formName: newFormName,
+                formTitle: $('#formTitleInput').val(),
+                tags: formTags
+            });
+            
+            // Close modal
+            $('#formDetailsModal').modal('hide');
+            
+            alert('Form details saved successfully!');
         });
 
         console.log('✓ jQuery modal and form details initialized');
