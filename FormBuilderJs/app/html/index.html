@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Builder Test</title>
+	<!-- <link rel="stylesheet"
+		href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css"> -->
+<link id="themeStylesheet"
+rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+	<link rel="stylesheet" href="../../dist/formio.full.css">
+
+    <link rel="stylesheet"
+href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../css/builder.css">
+
+</head>
+<body>
+
+<div class="menu-overlay" id="menuOverlay"></div>
+
+<div class="builder-navbar">
+    <div class="header-left">
+        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+            <i class="bi bi-list"></i>
+        </button>
+        <h2>Form Builder</h2>
+    </div>
+
+    <div class="form-name-wrapper">
+    <input
+        type="text"
+        class="form-name-input"
+        value="Untitled Form"
+        disabled>
+
+        <button class="edit-form-btn" title="Edit Name">
+            <i class="bi bi-pencil"></i>
+        </button>
+    </div>
+    
+    <div class="dropdown-menu-custom" id="dropdownMenu">
+        <div class="dropdown-menu-header">
+            <h3>Menu</h3>
+            <button class="menu-close-btn" onclick="toggleMenu()">
+                <i class="bi bi-x"></i>
+            </button>
+        </div>
+        <div class="dropdown-menu-items">
+            <a href="../../homePage.html">
+                <i class="bi bi-house"></i> Home
+            </a>
+            <a href="existingForms.html">
+                <i class="bi bi-file-earmark"></i> Forms
+            </a>
+            <a href="addResource.html">
+                <i class="bi bi-plus-circle"></i> Add new Resource
+            </a>
+        </div>
+    </div>
+
+<div class="menu-buttons">
+
+    <button class="btn btn-light" id="newEdit" title="New">
+        <i class="bi bi-file-earmark-plus"></i>
+    </button>
+
+    <button class="btn btn-light" id="openJson"
+            title="Open JSON"
+            onclick="document.getElementById('jsonFile').click()">
+        <i class="bi bi-folder2-open"></i>
+    </button>
+
+    <button class="btn btn-light" id="downloadJson" title="Download">
+        <i class="bi bi-download"></i>
+    </button>
+
+    <button hidden class="btn btn-light" title="Import">
+        <i class="bi bi-upload"></i>
+    </button>
+
+    <button class="btn btn-light" id="undoBtn" title="Undo">
+        <i class="bi bi-arrow-counterclockwise"></i>
+    </button>
+
+    <button class="btn btn-light" id="redoBtn" title="Redo">
+        <i class="bi bi-arrow-clockwise"></i>
+    </button>
+
+    <button hidden class="btn btn-light" title="Settings">
+        <i class="bi bi-gear"></i>
+    </button>
+
+</div>
+
+<div class="top-actions">
+
+    <label class="theme-switch">
+    <input type="checkbox" id="themeToggle">
+    <span class="slider"></span>
+</label>
+
+    <button class="btn btn-success" id="previewForm" title="Preview">
+        <i class="bi bi-eye"></i>
+    </button>
+
+    <button hidden class="btn btn-success" id="previewForm" title="Preview">
+        <i class="bi bi-arrow-up-right-square"></i>
+    </button>
+
+    <button class="btn btn-primary" id='saveBtn'title="Save">
+        <i class="bi bi-floppy"></i>
+    </button>
+
+</div>
+
+</div>
+
+
+<input
+type="file"
+id="jsonFile"
+accept=".json">
+
+<div id="builder"></div>
+
+<!-- Drag and Drop Alert -->
+<div class="drag-and-drop-alert alert alert-info no-drag" style="display: none; margin: 20px; padding: 20px; border-radius: 8px; background: #e7f3ff; border: 1px solid #b3d9ff; color: #004085;">
+    <i class="bi bi-info-circle"></i> <strong>Drop components here</strong> - Drag form elements from the left sidebar to build your form.
+</div>
+
+
+<!-- Form Details Modal -->
+<div class="modal fade" id="formDetailsModal">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+
+            <div class="modal-header">
+                <h5 class="modal-title">Form Details</h5>
+
+                <button type="button"
+                        class="close"
+                        data-dismiss="modal">
+                    <span>&times;</span>
+                </button>
+            </div>
+
+            <div class="modal-body">
+
+                <!-- Form Name -->
+                <div class="form-group">
+                    <label>Form Name</label>
+                    <input type="text"
+                           class="form-control"
+                           id="formNameInput">
+                </div>
+
+                <!-- Form Title -->
+                <div class="form-group">
+                    <label>Form Title</label>
+                    <input type="text"
+                           class="form-control"
+                           id="formTitleInput"
+                           readonly>
+                </div>
+
+                <!-- Tags -->
+                <div class="form-group">
+                    <label>Form Tags</label>
+
+                    <div id="tagContainer" class="tag-container"></div>
+
+                    <input type="text"
+                           class="form-control mt-2"
+                           id="tagInput"
+                           placeholder="Type tag and press Space">
+                </div>
+
+            </div>
+
+            <div class="modal-footer">
+                <button class="btn btn-secondary"
+                        data-dismiss="modal">
+                    Close
+                </button>
+
+                <button class="btn btn-primary"
+                        id="saveFormDetails">
+                    Save
+                </button>
+            </div>
+
+        </div>
+    </div>
+</div>
+
+
+<script src="../../dist/formio.full.js"></script>
+<script src="../js/main.js"></script>
+
+</body></html>

@@ -1,0 +1,1094 @@
+body {
+  font-family: Verdana, Arial, sans-serif !important;
+  font-size: 12px !important;
+}
+
+.pad-0 {
+  padding: 0 !important;
+}
+
+.pad-2 {
+  padding: 2px !important;
+}
+
+.pad-5 {
+  padding: 5px !important;
+}
+
+.pad-10 {
+  padding: 10px !important;
+}
+
+.fc-margin0 {
+  margin: 0px !important;
+}
+
+.fc-margin5 {
+  margin: 5px !important;
+}
+
+.fc-marginT5 {
+  margin-top: 5px !important;
+}
+
+.fc-marginT10,
+.mt-10 {
+  margin-top: 10px !important;
+}
+
+.fc-marginT50,
+.mt-50 {
+  margin-top: 50px !important;
+}
+
+.text-left {
+  text-align: left !important;
+}
+
+.text-right {
+  text-align: right !important;
+}
+
+.text-center {
+  text-align: center !important;
+}
+
+.flexCenter {
+  justify-content: center;
+  align-items: center;
+  display: flex !important;
+}
+
+.dpInlineFlex {
+  display: inline-flex !important;
+}
+
+.dpFlex {
+  display: -ms-flexbox;
+  display: flex !important;
+  display: -webkit-box;
+  display: -webkit-flex;
+}
+
+.dpBlock {
+  display: block !important;
+}
+
+.dpBlock div {
+  display: inline-block;
+}
+
+.dpBlock div .form-group {
+  vertical-align: middle !important;
+  margin: 5px 0px !important;
+  display: inline-grid;
+}
+
+.dpBlock .formio-errors.invalid-feedback {
+  display: none;
+}
+
+.btnDefaultClr button {
+  border: 1px solid #d3d3d3 !important;
+  background-color: #e6e6e6 !important;
+  font-weight: normal;
+  color: #555 !important;
+  border-radius: 4px !important;
+  padding: 2px 10px;
+  font-size: 13px;
+  font-family: Verdana, Arial, sans-serif !important;
+}
+
+.btnDefaultClr button:hover,
+.btnDefaultClr button:active,
+.btnDefaultClr button:focus {
+  border: 1px solid #999 !important;
+  background: #dadada !important;
+  font-weight: normal;
+  color: #212121 !important;
+}
+
+.btnDefaultClr button {
+  border: 1px solid #d3d3d3 !important;
+  background-color: #e6e6e6 !important;
+  font-weight: normal;
+  color: #555 !important;
+  border-radius: 4px !important;
+}
+
+.btnDefaultClr button:hover,
+.btnDefaultClr button:active,
+.btnDefaultClr button:focus {
+  border: 1px solid #999 !important;
+  background: #dadada !important;
+  font-weight: normal;
+  color: #212121 !important;
+}
+
+.dfbc-basic-form {
+  overflow: hidden;
+  width: 100% !important;
+  max-width: 1140px !important;
+  margin: 0 auto !important;
+}
+
+.dfbc-basic-form .row {
+  width: 100% !important;
+  max-width: 1140px !important;
+  min-width: auto !important;
+  margin: 0 auto !important;
+}
+
+.dfbc-basic-form .formsTitle h4 span {
+  color: #000 !important;
+}
+
+.dfbc-basic-form .display-flex .col-md-3 {
+  display: flex;
+}
+
+.dfbc-basic-form .display-flex .col-md-3 .dfbsc-caption {
+  font-weight: bold;
+  width: 100px;
+  display: block;
+}
+
+.dfbc-basic-form .display-flex .col-md-3 .dfbsc-value {
+  margin-left: 5px;
+}
+
+.labelBold .col-form-label,
+.labelBold .field-label {
+  font-weight: bold !important;
+}
+
+.inputControls-w-50 input[type="text"],
+.inputControls-w-50 input[type="password"],
+.inputControls-w-50 .formio-choices.form-group,
+.inputControls-w-50 .input-group {
+  width: 50% !important;
+}
+
+.mb-0 p {
+  margin-bottom: 0px !important;
+}
+
+.alternate-rows .card .card-body > div:nth-child(even),
+.alternate-rows table,
+.alternate-rows-2 div > .row:nth-child(even) {
+  background-color: #effbff;
+  border: 1px solid gray;
+  padding: 5px;
+  border-bottom: none;
+}
+
+.alternate-rows .card .card-body > div:nth-child(odd),
+.alternate-rows-2 div > .row:nth-child(odd) {
+  background-color: #fffcfc;
+  border: 1px solid gray;
+  padding: 5px;
+  border-bottom: none;
+}
+
+.alternate-rows .card .card-body > div:last-child,
+.alternate-rows-2 div > .row:last-child {
+  border-bottom: 1px solid #989090 !important;
+}
+
+.alternate-rows-2 {
+  margin-bottom: 10px;
+}
+
+.formGroupMarB0 .card .card-body > div {
+  margin-bottom: 0px;
+}
+/*.dfbc-basic-form .dfbc-jqui-accordion .form-group,
+.dfbc-basic-form .dfbc-non-accordion-controls .form-group,*/
+.dfbc-basic-form .dfbc-non-accordion-controls .formio-component-modal-wrapper,
+.dfbc-basic-form .dfbc-jqui-accordion .formio-component-modal-wrapper {
+  margin-bottom: 0px !important;
+}
+
+.dfbc-basic-form .form-control {
+  height: auto;
+  padding: 2px;
+  margin: 2px 0;
+  font-size: 13px;
+}
+
+.dfbc-basic-form .choices .form-control {
+  padding: 0px 5px;
+  height: auto;
+}
+
+.input-group-append {
+  padding: 2px 0px;
+}
+
+.dfbc-basic-form .sign-box {
+  display: flex;
+  align-items: center;
+}
+
+.phw-buttons {
+  display: block;
+  text-align: right;
+}
+
+.phw-buttons .form-group {
+  margin-bottom: 0px;
+}
+
+.form-detail-header .col-form-label {
+  font-weight: 600;
+  color: #747474;
+}
+
+.form-detail-header .choices__list--dropdown .choices__list {
+  position: relative;
+  max-height: 200px !important;
+  overflow: auto;
+}
+
+.choices__item.choices__item--selectable {
+  font-size: 12px !important;
+}
+
+.hr-border-bottom {
+  border-bottom: 1px solid #ddd;
+  padding-bottom: 5px;
+}
+
+.hr-border-top {
+  border-top: 1px solid #ddd;
+  padding-top: 5px;
+}
+
+.phw-buttons .form-group {
+  display: inline-block;
+}
+
+.phw-buttons button,
+.datagrid-table button,
+.phw-button button {
+  border: 1px solid #d3d3d3 !important;
+  background-color: #e6e6e6 !important;
+  font-weight: normal;
+  color: #555 !important;
+  border-radius: 4px !important;
+  padding: 2px 10px;
+  margin-left: 5px;
+  font-size: 13px;
+  font-family: Verdana, Arial, sans-serif !important;
+}
+
+.phw-buttons button:hover,
+.phw-buttons button:active,
+.phw-buttons button:focus {
+  border: 1px solid #999 !important;
+  background: #dadada !important;
+  font-weight: normal;
+  color: #212121 !important;
+}
+
+.phw-buttons .null.has-success,
+.phw-buttons .null.has-error,
+.phw-buttons .help-block {
+  display: none !important;
+}
+
+.HeaderCommandsSection .null.has-success,
+.HeaderCommandsSection .null.has-error,
+.HeaderCommandsSection .help-block {
+  display: none !important;
+}
+
+.radioGroup .radio.form-check-inline,
+.radioGroup .radio.form-check,
+.checkboxGroup .checkbox.form-check-inline {
+  width: 45% !important;
+  padding-left: 23px !important;
+  text-indent: -23px !important;
+}
+
+.fc-textCenter {
+  text-align: center !important;
+}
+
+.fc-displayNone {
+  display: none;
+}
+
+.overflowHidden {
+  overflow: hidden !important;
+}
+
+.dfbc-basic-form .padLZero .col-md-1,
+.dfbc-basic-form .padLZero .col-md-2,
+.dfbc-basic-form .padLZero .col-md-3,
+.dfbc-basic-form .padLZero .col-md-4,
+.dfbc-basic-form .padLZero .col-md-5,
+.dfbc-basic-form .padLZero .col-md-6,
+.dfbc-basic-form .padLZero .col-md-7,
+.dfbc-basic-form .padLZero .col-md-8,
+.dfbc-basic-form .padLZero .col-md-9,
+.dfbc-basic-form .padLZero .col-md-10,
+.dfbc-basic-form .padLZero .col-md-11,
+.dfbc-basic-form .padLZero .col-md-12 {
+  padding-left: 0px !important;
+}
+
+h1,
+h2,
+h3,
+h4,
+h5,
+h6 {
+  color: #000000 !important;
+}
+
+.fc-marginR5 {
+  margin-right: 5px;
+}
+
+.fc-marginL20 {
+  margin-left: 20px !important;
+}
+
+/* FormIO Textbox Width Section */
+.fc-width100 .form-control,
+.fc-width100 .choices,
+.fc-width100 .input-group {
+  width: 100%;
+}
+
+.fc-width95 .form-control,
+.fc-width95 .input-group,
+.fc-width95 .choices {
+  width: 95%;
+}
+
+.fc-width90 .form-control,
+.fc-width90 .input-group,
+.fc-width90 .choices {
+  width: 90%;
+}
+
+.fc-width85 .form-control,
+.fc-width85 .input-group,
+.fc-width85 .choices {
+  width: 85%;
+}
+
+.fc-width80 .form-control,
+.fc-width80 .input-group,
+.fc-width80 .choices {
+  width: 80%;
+}
+
+.fc-width75 .form-control,
+.fc-width75 .input-group,
+.fc-width75 .choices {
+  width: 75%;
+}
+
+.fc-width70 .form-control,
+.fc-width70 .input-group,
+.fc-width70 .choices {
+  width: 70%;
+}
+
+.fc-width65 .form-control,
+.fc-width65 .input-group,
+.fc-width65 .choices {
+  width: 65%;
+}
+
+.fc-width60 .form-control,
+.fc-width60 .input-group,
+.fc-width60 .choices {
+  width: 60%;
+}
+
+.fc-width55 .form-control,
+.fc-width55 .input-group,
+.fc-width55 .choices {
+  width: 55%;
+}
+
+.fc-width50 .form-control,
+.fc-width50 .input-group,
+.fc-width50 .choices {
+  width: 50%;
+}
+
+.fc-width45 .form-control,
+.fc-width45 .input-group,
+.fc-width45 .choices {
+  width: 45%;
+}
+
+.fc-width40 .form-control,
+.fc-width40 .input-group,
+.fc-width40 .choices {
+  width: 40%;
+}
+
+.fc-width35 .form-control,
+.fc-width35 .input-group,
+.fc-width35 .choices {
+  width: 35%;
+}
+
+.fc-width30 .form-control,
+.fc-width30 .input-group,
+.fc-width30 .choices {
+  width: 30%;
+}
+
+.fc-width25 .form-control,
+.fc-width25 .input-group,
+.fc-width25 .choices {
+  width: 25%;
+}
+
+.fc-width20 .form-control,
+.fc-width20 .input-group,
+.fc-width20 .choices {
+  width: 20%;
+}
+
+.fc-width15 .form-control,
+.fc-width15 .input-group,
+.fc-width15 .choices {
+  width: 15%;
+}
+
+.fc-width10 .form-control,
+.fc-width10 .input-group,
+.fc-width10 .choices {
+  width: 10%;
+}
+
+.fc-width5 .form-control,
+.fc-width5 .input-group,
+.fc-width5 .choices {
+  width: 5%;
+}
+
+/*Tables With Header, Alternative Rows Color*/
+
+.tableAlternate table {
+  margin-bottom: 10px !important;
+}
+
+.tableAlternate table tbody tr:first-child td,
+.tableAlternate1 table tbody tr:first-child td {
+  background: #ddd;
+}
+
+.tableAlternate table tbody tr:first-child p {
+  margin-bottom: 0px;
+}
+
+.tableAlternate table tbody tr:nth-child(even),
+.alternate-rows table tbody tr:nth-child(even),
+.tableAlternate1 table tbody tr:nth-child(even),
+.tableNoHeader table tbody tr:nth-child(even) {
+  background-color: #effbff;
+}
+
+.tableAlternate table tbody tr:nth-child(odd),
+.alternate-rows table tbody tr:nth-child(odd),
+.tableAlternate1 table tbody tr:nth-child(odd),
+.tableNoHeader table tbody tr:nth-child(odd) {
+  background-color: #fffcfc;
+}
+
+.tableAlternate.niaTable table tbody tr td:first-child {
+  width: 70%;
+}
+
+.tableInfant tbody tr td:first-child {
+  width: 30% !important;
+}
+
+.tableInfant tbody tr td:nth-child(2) {
+  width: 40%;
+}
+
+/*Tables Without Header, Alternative Rows Color*/
+
+.tableAlternateRows table tbody tr:nth-child(even) {
+  background-color: #effbff;
+}
+
+.tableAlternateRows table tbody tr:nth-child(odd) {
+  background-color: #fffcfc;
+}
+
+.tableAlternateRows.thead table tbody tr:first-child td {
+  background: #ddd;
+}
+
+.tableAlternateRows table tbody tr td:first-child {
+  width: 30%;
+}
+
+.npaTable table {
+  margin-bottom: 10px !important;
+}
+
+.npaTable .tableAlternateRows table tbody tr td:nth-child(2) {
+  width: 15% !important;
+}
+
+.npaTable2.tableAlternateRows table tbody tr td:nth-child(2) {
+  width: 10% !important;
+}
+
+.npaTable3.tableAlternateRows table tbody tr td:nth-child(1) {
+  width: 70% !important;
+}
+
+.pnccTable table tbody tr td:first-child {
+  vertical-align: middle;
+}
+
+.pnccTable2 .tableAlternateRows table tbody tr td:first-child {
+  width: 20%;
+}
+
+.pnccTable2 table tbody tr td:first-child {
+  vertical-align: middle;
+  width: 15%;
+}
+
+.fchdTable .tableAlternateRows table tbody tr td:first-child {
+  width: 10%;
+}
+
+.fchdTable .tableAlternateRows table tbody tr td:nth-child(2) {
+  width: 30% !important;
+}
+
+.ml-20 {
+  margin-left: 20px;
+}
+
+.iFrameDialogContainer {
+  overflow: hidden !important;
+}
+
+.fc-bgNotification {
+  background-color: #ffffcc;
+}
+
+.fc-borderNotification {
+  border: 1px solid red;
+}
+
+.fc-divStatusMsg {
+  background-color: rgb(255, 255, 204);
+  color: rgb(0, 0, 0);
+}
+
+.fc-esbNotification {
+  clear: both;
+  color: Black;
+  background-color: #e9d9bb;
+  font-weight: bold;
+  width: auto;
+}
+
+.fc-textCenter {
+  text-align: center !important;
+}
+
+.lh-1-8 {
+  line-height: 1.8;
+}
+/*Styles for using in Nursing Prenatal, Infant, Trimester Assessment forms */
+.tableAlternate1 tbody tr td:last-child,
+.tableNoHeader tbody tr td:last-child {
+  width: 60%;
+}
+
+.tableAlternate1 .form-check-label,
+.tableNoHeader .form-check-label {
+  display: block !important;
+  text-align: center;
+}
+
+.tableHeaderBg table tbody tr:first-child,
+.tableFooterBg table tbody tr:last-child,
+.tableLastColBg table tbody tr td:last-child,
+.tableFirstRowLastColBg table tbody tr:first-child td:last-child {
+  background-color: #ddd !important;
+}
+
+.headerBg {
+  background: #c5c5c5 !important;
+  font-weight: bold;
+}
+
+.fc-verticalSpacer {
+  margin-top: 30px !important;
+}
+
+.borderCol {
+  border: 1px solid #ddd !important;
+}
+
+.padLRZero .col-md-1,
+.padLRZero .col-md-2,
+.padLRZero .col-md-3,
+.padLRZero .col-md-4,
+.padLRZero .col-md-5,
+.padLRZero .col-md-6,
+.padLRZero .col-md-7,
+.padLRZero .col-md-8,
+.padLRZero .col-md-9,
+.padLRZero .col-md-10,
+.padLRZero .col-md-11,
+.padLRZero .col-md-12 {
+  padding-left: 0px;
+  padding-right: 0px;
+}
+
+.dfbc-basic-form .choices__list--dropdown .choices__item--selectable,
+.dfbc-basic-form .choices__list[aria-expanded] .choices__item--selectable {
+  padding-right: 0px !important;
+  word-break: break-word !important;
+}
+
+.dfbc-basic-form table {
+  word-break: initial !important;
+}
+
+.dfbc-basic-form .choices__item.choices__item--selectable {
+  white-space: normal !important;
+}
+
+.tableAlternate1 .form-check-inline,
+.tableNoHeader tbody tr td:last-child {
+  margin-right: 5px;
+}
+
+.input-group-text {
+  padding: 2px 10px;
+}
+
+.field-content {
+  align-content: center;
+}
+
+.form-check-label {
+  display: flex !important;
+  align-items: flex-start;
+}
+
+.cssPnDAS_Header {
+  float: right;
+  width: 100% !important;
+}
+
+.cssPnDAS_HeaderTitle {
+  float: right;
+  color: blue;
+  font-weight: bold;
+  cursor: pointer;
+  text-decoration: underline;
+}
+
+.cssPnDAS_Body {
+  float: right;
+  width: 100% !important;
+}
+
+.cssPnDAS_PatAuth_DetailsTableContainer {
+  float: right !important;
+  width: auto !important;
+}
+
+.typeNewPrblm {
+  width: 450px;
+  float: left;
+  margin: 10px 0px 0px 5px;
+}
+
+.patientHeaderBG {
+  text-align: center;
+  font-size: 12px;
+  background-color: #ffff99;
+  cursor: pointer;
+  border-top: 1px dashed #222222;
+}
+
+.scrollDivs {
+  overflow-y: scroll;
+  max-height: 330px;
+  border-top: 1px solid #ddd;
+}
+
+.no-border-table table {
+  background: none;
+  border: none;
+}
+
+.alternate-rows .card .card-body .form-group,
+.alternate-rows-2 .form-group {
+  margin-bottom: 0px;
+}
+
+.fc-width180 .input-group {
+  width: 200px;
+}
+
+.table-bordered {
+  border-left: 1px solid #dee2e6 !important;
+}
+
+.table-bordered td,
+.table-bordered th {
+  border: 1px solid #dee2e6;
+}
+
+[class*="col-"],
+.col {
+  padding-right: 5px !important;
+  padding-left: 5px !important;
+}
+
+.fc-required {
+  color: red;
+}
+
+.equal-columns table tr td {
+  width: 33%;
+}
+
+.card-body {
+  padding: 0.5rem !important;
+}
+
+.form-check-input {
+  margin-top: 0.1rem !important;
+}
+
+.form-check {
+  margin-bottom: 0.5rem;
+}
+
+.card-header {
+  padding: 0.55rem 0.5rem;
+}
+
+.card-title {
+  font-weight: 600;
+}
+
+.form-title h4 {
+  font-size: 1rem;
+  margin-bottom: 30px;
+}
+
+.form-title p {
+  color: #696969;
+  font-size: 13px;
+}
+
+.font-13 .form-control {
+  font-size: 13px;
+}
+
+.ql-editor {
+  min-height: 150px;
+}
+
+.form-group {
+  margin-bottom: 0px;
+}
+/* Container with direct form controls drag&drop or using Multigrid layout */
+.striped-rows {
+  border: 1px solid #aaa;
+}
+
+.striped-rows > div > .formio-component {
+  border-bottom: 1px solid #aaa;
+  padding: 5px;
+  margin-bottom: 0;
+}
+
+.striped-rows > div > .formio-component:nth-child(even) {
+  background-color: #f0fbff;
+}
+
+.striped-rows > div > .formio-component:nth-child(odd) {
+  background-color: #fffcfc;
+}
+
+.striped-rows > div > .formio-component:last-child {
+  border-bottom: none;
+}
+
+.striped-rows.nested-view {
+  margin: 10px !important;
+  padding: 0px !important;
+  border-bottom: 1px solid #aaa !important;
+}
+
+.table-bordered {
+  background: #fff !important;
+}
+
+/* Datagrid table */
+
+.datagrid-table {
+  margin: 10px 0px;
+}
+
+.formio-component-datagrid .datagrid-table > tbody > tr > td {
+  vertical-align: middle;
+}
+
+.formio-component-datagrid
+  .datagrid-table
+  > tbody
+  > tr
+  > td:last-child.col-md-1 {
+  text-align: center;
+}
+
+.table td {
+  border: 1px solid #989090 !important;
+  padding: 5px;
+}
+.table thead th {
+  vertical-align: top !important;
+}
+/* table with header of multiple header titles */
+.with-header tbody tr:first-child,
+.datagrid-table thead tr {
+  background: #cdcdcd !important;
+  font-weight: bold;
+}
+.with-header tbody tr:first-child p,
+.datagrid-table thead tr p {
+  margin-bottom: 0px;
+}
+.with-header tbody tr:first-child td {
+  border-right: 1px solid #cdcdcd;
+  vertical-align: top !important;
+}
+
+/* table with header of single header title  */
+.single-title table tbody tr:first-child td {
+  border-right: none !important;
+  border-left: none !important;
+}
+
+.single-title table tbody tr:first-child td:first-child {
+  border-left: 1px solid #989090 !important;
+}
+
+.single-title table tbody tr:first-child td:last-child {
+  border-right: 1px solid #989090 !important;
+}
+
+.formio-component-datagrid .datagrid-table,
+.formio-component-datagrid .datagrid-table td,
+.formio-component-datagrid .datagrid-table th {
+  border: 1px solid #989090 !important;
+  padding: 5px !important;
+}
+
+.custom-stripped-table tbody tr:nth-of-type(odd),
+.datagrid-table tbody tr:nth-of-type(odd) {
+  background-color: #f0fbff;
+}
+
+.custom-stripped-table tbody tr:nth-of-type(even),
+.datagrid-table tbody tr:nth-of-type(even) {
+  background-color: #fffcfc;
+}
+
+.custom-stripped-table td {
+  vertical-align: middle;
+}
+
+.formio-component-tabs .card-header {
+  padding-bottom: 0px;
+}
+
+.formio-component-tabs .card-header .card-header-tabs {
+  margin: 0px;
+}
+
+.formio-component-tabs .card-header .card-header-tabs .nav-link {
+  color: #495057;
+}
+
+.formio-component-tabs .card-header .card-header-tabs .nav-link.active {
+  font-weight: bold;
+}
+
+.align-content-center [class*="col-"] {
+  align-content: center;
+}
+
+.btn-secondary {
+  color: #555;
+  background-color: #e6e6e6;
+  border-color: #d3d3d3;
+  border-radius: 4px !important;
+  padding: 2px 10px;
+}
+
+p {
+  margin-bottom: 5px;
+}
+
+/* Multi column grid layout with borders */
+.bordered-grid-layout > div > .row > [class*="col-"] {
+  border: 1px solid #aaa;
+  border-bottom: none;
+  border-right: none;
+  padding: 5px;
+}
+.bordered-grid-layout > div > .row > [class*="col-"]:nth-last-child(2) {
+  border-right: 1px solid #aaa;
+}
+.bordered-grid-layout > div > .row:last-child {
+  border-bottom: 1px solid #aaa;
+}
+.bg-gray {
+  background-color: #e6e6e6;
+}
+.dataGrid-header,
+.bordered-grid-layout.with-bg-header > div > .row:first-child, .with-single-header > [class*='col-']:first-child{
+  background-color: #e6e6e6 !important;
+  font-weight: bold;
+}
+.bordered-grid-layout.alternative-row-colors > div > .row:nth-child(even),
+.custom-panel.bg-even-row-color .card .card-body,
+.custom-panel.alternate-rows-panel .card-body > .formio-component:nth-of-type(even),
+.bg-even-row-color {
+  background-color: #f1fbff !important;
+}
+.bordered-grid-layout.alternative-row-colors > div > .row:nth-child(odd),
+.custom-panel.bg-odd-row-color .card .card-body,
+.custom-panel.alternate-rows-panel .card-body > .formio-component:nth-of-type(odd),
+.bg-odd-row-color {
+  background-color: #fffcfc !important;
+}
+.first-column-w-30 table tr td:first-child {
+  width: 30%;
+}
+.first-column-w-40 table tr td:first-child {
+  width: 40%;
+}
+.form-check-inline {
+  /* margin-bottom: 8px; */
+  margin-bottom: 0px;
+  margin-right:.5rem;
+}
+.formio-component-radio .form-radio {
+  margin-left: 8px;
+}
+.two-column-layout .form-radio .form-check-inline {
+  width: 47%;
+}
+.three-column-layout .form-radio .form-check-inline {
+  width: 31%;
+}
+.four-column-layout .form-radio .form-check-inline {
+  width: 23%;
+}
+.five-column-layout .form-radio .form-check-inline {
+  width: 15%;
+}
+.custom-panel .card {
+  border: 1px solid #aaa !important;
+}
+.custom-panel .card .card-header {
+  background-color: #e6e6e6;
+  border-bottom: 1px solid #aaa;
+  padding: 0.35rem !important;
+}
+.custom-panel .card .card-body {
+  background-color: #f1fbff;
+  padding: 0.35rem !important;
+}
+.custom-panel.alternate-rows-panel .card {border-bottom-left-radius: 0px !important;
+    border-bottom-right-radius: 0px !important;}
+.custom-panel.alternate-rows-panel .card .card-body{ padding:0px !important;}
+.custom-panel.alternate-rows-panel .card-body > .formio-component{border-bottom:1px solid #aaa; }
+.custom-panel.alternate-rows-panel .card-body > .formio-component:last-child{border-bottom:none;}
+.ae-freq-grid {
+  border-left: 1px solid #aaa;
+  border-top: 1px solid #aaa;
+}
+.ae-freq-grid > div > .row > [class*='col-']:nth-child(1),
+.ae-freq-grid > div > .row > [class*='col-']:nth-child(2) {
+  background: #e6e6e6;
+  font-weight: bold;
+}
+.ae-freq-grid > div > .row > [class*='col-']:nth-child(1) {
+  border-right: none !important;
+  padding-left: 10px !important;
+}
+.ae-freq-grid > div > .row > [class*='col-']:nth-child(2) [class*='col-'] {
+  border: none;
+  border-right: 1px solid #aaa;
+}
+/*.ae-freq-grid .row [class*='col-']:nth-child(4){}*/
+.col-md-2-border-right-none > div:first-child {
+  border-right: none !important;
+}
+.ae-freq-grid div > .formio-component-columns [class*='col-'] {
+  border-bottom: 1px solid #aaa;
+  border-right: 1px solid #aaa;
+  padding: 0px !important;
+}
+.ae-freq-nested-grid .col-md-10,
+.ae-freq-nested-grid .col-md-2 {
+  padding: 5px !important;
+}
+.ae-freq-nested-grid .col-md-10 {
+  border-bottom: none !important;
+  border-right: none !important;
+}
+.ae-freq-nested-grid .col-md-10 .row [class*='col-'] {
+  padding: 5px !important;
+}
+.ae-freq-grid .border-bottom-none [class*='col-'],
+.last-child-border-bottom-none > .col-md-2,
+.last-child-border-bottom-none .col-md-10,
+.border-bot-none [class*='col-']
+{
+  border-bottom: none !important;
+}
+.flex-content-center [class*='col-'],
+.ae-freq-nested-grid > .col-md-2,
+.ae-freq-grid > div > .row > [class*='col-']:nth-child(3) {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.visibility-hidden {
+  visibility: hidden;
+}
+.bord-right{border-right:1px solid #aaa}
+@media only screen and (max-width: 768px) {
+    .naph-responsive-table thead th:first-child {
+        width: 90%;
+    }
+
+    .naph-responsive-table .field-wrapper {
+        flex-direction: column;
+    }
+}
+.col-form-label.field-required::after {
+    content: "*" !important;
+}

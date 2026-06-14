@@ -1,0 +1,226 @@
+body {
+    background: #f4f6f9;
+    display: grid;
+    grid-template-columns: auto 1fr;
+    grid-template-rows: auto 1fr;
+    height: 100vh;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+}
+
+.builder-navbar {
+    background: white;
+    padding: 12px 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, .08);
+    margin-bottom: 0;
+    grid-column: 1 / -1;
+    grid-row: 1;
+}
+
+.nav-left {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+}
+
+h2 {
+    margin: 0;
+    letter-spacing: 2px;
+    font-weight: 600;
+}
+
+.menu-buttons {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.top-actions {
+    display: flex;
+    gap: 10px;
+}
+
+/* Content container for sidebar and builder */
+.formcomponents {
+    flex: 0 0 250px;
+    height: calc(100vh - 80px);
+    overflow-y: hidden;
+    overflow-x: hidden;
+    border-right: 1px solid #ddd;
+    transition: flex 0.3s ease, width 0.3s ease, grid-column-start 0.3s ease;
+    grid-column: 1;
+    grid-row: 2;
+    position: sticky;
+    top: 0;
+    z-index: 99;
+}
+
+.formcomponents.hidden {
+    flex: 0 0 0;
+    width: 0;
+    min-width: 0;
+    overflow: hidden;
+    border-right: none;
+    padding: 0;
+    margin: 0;
+}
+
+#builder {
+    flex: 1 1 auto;
+    height: calc(100vh - 80px);
+    overflow: auto;
+    padding: 20px;
+    width: 100%;
+    box-sizing: border-box;
+    max-width: none !important;
+    min-width: 0;
+    grid-column: 2;
+    grid-row: 2;
+}
+
+/* When sidebar is hidden, builder expands to full width */
+.formcomponents.hidden ~ #builder {
+    grid-column: 1 / -1;
+}
+
+#jsonFile {
+    display: none;
+}
+
+.btn {
+    border-radius: 8px;
+}
+
+.theme-switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 32px;
+}
+
+.theme-switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: #ccc;
+    transition: .4s;
+    border-radius: 34px;
+}
+
+.slider:before {
+    position: absolute;
+    content: "☀️";
+    height: 24px;
+    width: 24px;
+    left: 4px;
+    bottom: 4px;
+    background: white;
+    transition: .4s;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 12px;
+}
+
+input:checked + .slider {
+    background: #343a40;
+}
+
+input:checked + .slider:before {
+    transform: translateX(28px);
+    content: "🌙";
+}
+
+/* Thin dashed border for drag-and-drop area */
+#builder {
+    width: 100%;
+}
+
+/* Override Bootstrap column constraints */
+.formarea {
+    width: 100% !important;
+    max-width: 100% !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    flex: 1 !important;
+}
+
+/* Force all children to expand */
+#builder * {
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+}
+
+#builder > div {
+    width: 100% !important;
+}
+
+#builder .formio-form {
+    border: 1px dashed #4d1d13;
+    padding: 20px !important;
+    border-radius: 4px;
+    width: 100% !important;
+    margin: 0 !important;
+}
+
+.dark-mode {
+    background: #1e1e1e;
+}
+
+.dark-mode .builder-navbar {
+    background: #2d2d2d;
+}
+
+.dark-mode h2 {
+    color: white;
+}
+
+/* Sidebar toggle button */
+.sidebar-toggle-btn {
+    position: absolute;
+    top: 76px;
+    left: 20px;
+    background: #e4e6e7;
+    border: 1px solid #dee2e6;
+    font-size: 12px;
+    cursor: pointer;
+    color: #333;
+    padding: 4px 8px;
+    border-radius: 4px;
+    z-index: 100;
+    transition: all 0.2s ease;
+    margin: 0;
+}
+
+.sidebar-toggle-btn:hover {
+    background: #e9ecef;
+}
+
+.dark-mode .sidebar-toggle-btn {
+    color: #fff;
+    background: #2d2d2d;
+    border-color: #444;
+}
+
+.dark-mode .sidebar-toggle-btn:hover {
+    background: #3d3d3d;
+}
+
+/* Sidebar smooth transition */
+.formcomponents {
+    transition: flex 0.3s ease, width 0.3s ease, max-width 0.3s ease;
+}

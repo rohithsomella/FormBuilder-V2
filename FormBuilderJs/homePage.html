@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Form Builder - Home</title>
+    <link id="themeStylesheet"
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="app/css/home.css">
+</head>
+<body>
+
+<div class="home-container">
+    <div class="home-header">
+        <h1>Form Builder</h1>
+        <p>Build and manage forms</p>
+    </div>
+    
+    <div class="menu-options">
+        <a href="app/html/index.html" class="menu-card create">
+            <div class="card-content">
+                <span class="card-icon"><i class="bi bi-file-earmark-plus"></i></span>
+                <div class="card-title">Create New Form</div>
+                <div class="card-description">Start building a new form from scratch</div>
+            </div>
+        </a>
+        
+        <a href="app/html/existingForms.html" class="menu-card open">
+            <div class="card-content">
+                <span class="card-icon"><i class="bi bi-folder2-open"></i></span>
+                <div class="card-title">Open Existing Forms</div>
+                <div class="card-description">Browse and edit your saved forms</div>
+            </div>
+        </a>
+        
+        <a href="#more" class="menu-card more" onclick="handleMore(event)">
+            <div class="card-content">
+                <span class="card-icon"><i class="bi bi-gear"></i></span>
+                <div class="card-title">More</div>
+                <div class="card-description">Additional features coming soon</div>
+            </div>
+        </a>
+    </div>
+</div>
+
+<script>
+    function handleMore(event) {
+        event.preventDefault();
+        alert('More features - Coming Soon!');
+    }
+</script>
+
+</body>
+</html>

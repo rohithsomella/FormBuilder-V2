@@ -1,0 +1,12 @@
+# Visual Studio
+.vs/
+
+# .NET
+**/bin/
+**/obj/
+
+# Node.js
+**/node_modules/
+
+# Logs
+*.log
