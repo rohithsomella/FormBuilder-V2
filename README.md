@@ -1,4 +1,4 @@
-# 🚀 Local Builder Setup
+# 🚀 Form Builder Setup
 
 Build and run **Form.io 4.21.2** locally, modify source code, and generate your own `formio.full.js` and `formio.full.css`.
 
