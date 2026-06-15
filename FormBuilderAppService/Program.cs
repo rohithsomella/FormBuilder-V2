@@ -1,5 +1,7 @@
 using FormBuilderAppService.Repositories;
+using FormBuilderAppService.Repositories.Interfaces;
 using FormBuilderAppService.Services;
+using FormBuilderAppService.Services.Interfaces;
 using Microsoft.OpenApi.Models;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -33,6 +35,8 @@ builder.Services.AddCors(options =>
 // Register Repositories and Services
 builder.Services.AddScoped<IFormRepository, FormRepository>();
 builder.Services.AddScoped<IFormService, FormService>();
+builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
+builder.Services.AddScoped<IFormSubmissionService, FormSubmissionService>();
 
 var app = builder.Build();
 

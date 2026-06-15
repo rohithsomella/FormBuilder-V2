@@ -1,11 +1,195 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Preview Form</title>
+    <link id="themeStylesheet"
+        rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="../../dist/formio.full.css">
+    <link rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+        body {
+            background-color: #f5f5f5;
+            padding: 20px;
+        }
+        .form-container {
+            max-width: 800px;
+            margin: 0 auto;
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        .form-header {
+            margin-bottom: 30px;
+            padding-bottom: 20px;
+            border-bottom: 1px solid #e0e0e0;
+        }
+        .form-header h1 {
+            margin: 0;
+            color: #333;
+        }
+        .form-header p {
+            margin: 10px 0 0 0;
+            color: #666;
+        }
+        #formio-form {
+            margin-top: 20px;
+        }
+        .loading-message {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .error-message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+        .success-message {
+            padding: 15px;
+            margin: 20px 0;
+            border-radius: 4px;
+            background-color: #d4edda;
+            border: 1px solid #c3e6cb;
+            color: #155724;
+        }
+    </style>
 </head>
 <body>
-    
+    <div class="form-container">
+        <div class="form-header">
+            <h1 id="formTitle">Loading Form...</h1>
+            <p id="formDescription" style="display: none;"></p>
+        </div>
+        <div id="errorContainer"></div>
+        <div id="successContainer"></div>
+        <div id="loadingMessage" class="loading-message">
+            <i class="bi bi-hourglass-split"></i> <strong>Loading form...</strong>
+        </div>
+        <div id="formio-form" style="display: none;"></div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../../dist/formio.full.js"></script>
+    <script src="../js/FormBuilderApi.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Get formId from URL query parameter
+            var urlParams = new URLSearchParams(window.location.search);
+            var formId = urlParams.get('formId');
+
+            if (!formId) {
+                showError('No form ID provided in URL');
+                return;
+            }
+
+            console.log('Loading form with ID:', formId);
+
+            // Fetch the form
+            FormBuilderApi.getFormById(formId,
+                function(form) {
+                    console.log('Form loaded successfully:', form);
+                    loadFormForPreview(form);
+                },
+                function(error) {
+                    console.error('Error loading form:', error);
+                    showError('Failed to load form: ' + error);
+                }
+            );
+        });
+
+        function loadFormForPreview(form) {
+            try {
+                // Update page title and description
+                document.getElementById('formTitle').textContent = form.formTitle || form.formName || 'Untitled Form';
+                
+                if (form.formTags) {
+                    var description = document.getElementById('formDescription');
+                    description.textContent = form.formTags;
+                    description.style.display = 'block';
+                }
+
+                // Parse form JSON
+                var formSchema = {};
+                try {
+                    formSchema = JSON.parse(form.formJson);
+                } catch (e) {
+                    console.error('Error parsing form JSON:', e);
+                    formSchema = { components: [] };
+                }
+
+                // Hide loading and show form
+                document.getElementById('loadingMessage').style.display = 'none';
+                document.getElementById('formio-form').style.display = 'block';
+
+                // Render the form with submission handling
+                Formio.createForm(
+                    document.getElementById('formio-form'),
+                    formSchema
+                ).then(function(formInstance) {
+                    console.log('Form rendered successfully');
+
+                    // Handle form submission - use 'submitForm' event (Formio's submit event)
+                    formInstance.on('submitForm', function(submission) {
+                        console.log('Form submitted with data:', submission);
+                        
+                        // Get just the data part of the submission
+                        var submissionData = submission.data;
+                        console.log('Submission data:', submissionData);
+
+                        // Send to backend
+                        FormBuilderApi.submitFormData(
+                            form.formId,
+                            submissionData,
+                            function(response) {
+                                console.log('Submission saved successfully:', response);
+                                showSuccess('Form submitted successfully! Submission ID: ' + response.submissionId);
+                                // Reset the form
+                                formInstance.reset();
+                            },
+                            function(error, statusCode) {
+                                console.error('Error submitting form:', error);
+                                showError('Error submitting form: ' + error);
+                            }
+                        );
+
+                        // Prevent default submission
+                        return false;
+                    });
+
+                }).catch(function(error) {
+                    console.error('Error rendering form:', error);
+                    showError('Error rendering form: ' + error.message);
+                });
+
+            } catch (error) {
+                console.error('Error loading form for preview:', error);
+                showError('Error loading form: ' + error.message);
+            }
+        }
+
+        function showError(message) {
+            var errorContainer = document.getElementById('errorContainer');
+            errorContainer.innerHTML = '<div class="error-message"><i class="bi bi-exclamation-circle"></i> ' + message + '</div>';
+            document.getElementById('loadingMessage').style.display = 'none';
+        }
+
+        function showSuccess(message) {
+            var successContainer = document.getElementById('successContainer');
+            successContainer.innerHTML = '<div class="success-message"><i class="bi bi-check-circle"></i> ' + message + '</div>';
+            // Auto-hide after 5 seconds
+            setTimeout(function() {
+                successContainer.innerHTML = '';
+            }, 5000);
+        }
+    </script>
 </body>
-</html>
+</html> -->

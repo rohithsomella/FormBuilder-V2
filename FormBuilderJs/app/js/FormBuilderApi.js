@@ -328,8 +328,12 @@ var FormBuilderApi = (function() {
      */
     function viewForm(formId) {
         console.log('View form:', formId);
-        // TODO: Navigate to form viewer with this form
-        alert('View form: ' + formId);
+        if (!formId) {
+            alert('Form ID is required');
+            return;
+        }
+        // Navigate to preview page with form ID
+        window.location.href = 'previewPage.html?formId=' + formId;
     }
 
     /**
@@ -479,6 +483,9 @@ var FormBuilderApi = (function() {
                 '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
+                '<button class="btn btn-sm btn-success" title="View and submit form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.viewForm(\'' + form.formId + '\')">' +
+                '<i class="bi bi-eye"></i>' +
+                '</button> ' +
                 '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-copy"></i>' +
                 '</button> ' +
@@ -568,6 +575,56 @@ var FormBuilderApi = (function() {
         }
     }
 
+    /**
+     * Submit form submission data to the backend
+     * @param {String} formId - The form ID
+     * @param {Object} submissionData - The form submission data object
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function submitFormData(formId, submissionData, onSuccess, onError) {
+        if (!formId || !submissionData) {
+            console.error('Form ID and submission data are required');
+            if (onError) {
+                onError('Form ID and submission data are required', 400);
+            }
+            return;
+        }
+
+        var submissionUrl = config.baseUrl.replace('/api/forms', '/api/formsubmissions');
+        var payload = {
+            formId: formId,
+            submissionData: JSON.stringify(submissionData)
+        };
+
+        console.log('Submitting form data to:', submissionUrl);
+        console.log('Payload:', payload);
+
+        $.ajax({
+            url: submissionUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            success: function(response) {
+                console.log('Form submission saved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error submitting form:', error);
+                var errorMessage = 'Error submitting form';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
     // Public API
     return {
         getAllForms: getAllForms,
@@ -582,6 +639,7 @@ var FormBuilderApi = (function() {
         deleteForm: deleteForm,
         previousPage: previousPage,
         nextPage: nextPage,
+        submitFormData: submitFormData,
         config: config
     };
 
