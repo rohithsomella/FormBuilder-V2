@@ -17,7 +17,7 @@ namespace FormBuilderAppService.Services
             return _formRepository.GetForms();
         }
 
-        public Form GetFormById(Guid formId)
+        public Form? GetFormById(Guid formId)
         {
             return _formRepository.GetFormById(formId);
         }

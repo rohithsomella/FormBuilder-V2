@@ -1,32 +1,3 @@
-/*=========================================================
-    TABLE : Forms
-=========================================================*/
-
-IF OBJECT_ID('dbo.Forms', 'U') IS NOT NULL
-BEGIN
-    DROP TABLE dbo.Forms;
-END
-GO
-
-CREATE TABLE dbo.Forms
-(
-    FormId UNIQUEIDENTIFIER NOT NULL
-        CONSTRAINT PK_Forms PRIMARY KEY
-        DEFAULT NEWID(),
-
-    FormName NVARCHAR(200) NOT NULL,
-
-    FormTitle NVARCHAR(200) NOT NULL,
-
-    FormTags NVARCHAR(500) NULL,
-
-    FormJson NVARCHAR(MAX) NOT NULL,
-
-    IsDeleted BIT NOT NULL
-        CONSTRAINT DF_Forms_IsDeleted DEFAULT (0)
-);
-GO
-
 
 /*=========================================================
     PROCEDURE : SaveForm

@@ -16,7 +16,7 @@ namespace FormBuilderAppService.Repositories
 
         private string GetConnectionString()
         {
-            return _configuration.GetConnectionString("PracticeDB");
+            return _configuration.GetConnectionString("PracticeDB") ?? throw new InvalidOperationException("Connection string 'PracticeDB' not found");
         }
 
         public List<Form> GetForms()
@@ -32,7 +32,7 @@ namespace FormBuilderAppService.Repositories
             }
         }
 
-        public Form GetFormById(Guid formId)
+        public Form? GetFormById(Guid formId)
         {
             using (SqlConnection connection = new SqlConnection(GetConnectionString()))
             {
