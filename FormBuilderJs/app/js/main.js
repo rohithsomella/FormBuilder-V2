@@ -519,6 +519,14 @@ try {
                     "Form is not saved yet, do you want to open new edit workspace?",
                     function() {
                         console.log("Opening new edit workspace");
+                        
+                        // Clear session storage
+                        console.log('🧹 Clearing session storage...');
+                        sessionStorage.removeItem('editingFormId');
+                        sessionStorage.removeItem('editingFormData');
+                        sessionStorage.removeItem('copyingFormData');
+                        console.log('✓ Session storage cleared');
+                        
                         // Reset builder and history
                         formHistory = [];
                         historyIndex = -1;
