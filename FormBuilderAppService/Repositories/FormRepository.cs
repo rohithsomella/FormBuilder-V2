@@ -46,15 +46,43 @@ namespace FormBuilderAppService.Repositories
             }
         }
 
-        public void SaveForm(Form model)
+        public Guid SaveForm(Form model)
+        {
+            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            {
+                connection.Open();
+                try
+                {
+                    var result = connection.QueryFirstOrDefault<Guid?>(
+                        "dbo.SaveForm",
+                        new
+                        {
+                            @FormName = model.FormName,
+                            @FormTitle = model.FormTitle,
+                            @FormTags = model.FormTags,
+                            @FormJson = model.FormJson
+                        },
+                        commandType: CommandType.StoredProcedure
+                    );
+                    return result ?? Guid.NewGuid();
+                }
+                catch (Exception ex)
+                {
+                    throw new Exception($"Error saving form: {ex.Message}", ex);
+                }
+            }
+        }
+
+        public void UpdateForm(Form model)
         {
             using (SqlConnection connection = new SqlConnection(GetConnectionString()))
             {
                 connection.Open();
                 connection.Execute(
-                    "dbo.SaveForm",
+                    "dbo.UpdateForm",
                     new
                     {
+                        @FormId = model.FormId,
                         @FormName = model.FormName,
                         @FormTitle = model.FormTitle,
                         @FormTags = model.FormTags,

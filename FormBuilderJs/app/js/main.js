@@ -439,16 +439,8 @@ loadFormJsonIntoBuilder(initialFormSchema)
     builderInstance = builder;
     console.log("Builder Loaded", builder);
 
-    // Clear editing/copying data from sessionStorage since form is now loaded
-    if (editingFormData) {
-        sessionStorage.removeItem('editingFormData');
-        sessionStorage.removeItem('editingFormId');
-        console.log('✓ Cleared editing form data from sessionStorage');
-    }
-    if (isCopyingForm) {
-        sessionStorage.removeItem('copyingFormData');
-        console.log('✓ Cleared copying form data from sessionStorage');
-    }
+    // NOTE: Do NOT clear sessionStorage here - we need editingFormData for the Save button!
+    // It will be cleared AFTER successful update/save
 
     // Populate form details from extracted metadata (skip for copy operations)
     if (!isCopyingForm) {
@@ -961,12 +953,15 @@ try {
             
             // Check if we're editing an existing form
             var editingFormDataStr = sessionStorage.getItem('editingFormData');
-            if (editingFormDataStr) {
-                // Update existing form
+            var hasSeenUpdateModal = sessionStorage.getItem('hasSeenUpdateModal');
+            
+            console.log('Save button clicked - editingFormData exists:', !!editingFormDataStr, 'hasSeenUpdateModal:', hasSeenUpdateModal);
+            
+            if (editingFormDataStr && hasSeenUpdateModal === 'true') {
+                // QUICK UPDATE MODE - Skip modal, direct update
+                console.log('✓ Quick update - skipping modal, direct update');
                 try {
                     var editingFormData = JSON.parse(editingFormDataStr);
-                    console.log('Updating existing form:', editingFormData.formId);
-                    
                     var updateData = {
                         formId: editingFormData.formId,
                         formName: editingFormData.formName,
@@ -979,9 +974,6 @@ try {
                         function(response) {
                             console.log('Form updated successfully:', response);
                             alert('Form updated successfully!');
-                            // Clear the editing data from sessionStorage
-                            sessionStorage.removeItem('editingFormData');
-                            sessionStorage.removeItem('editingFormId');
                         },
                         function(error) {
                             console.error('Error updating form:', error);
@@ -992,8 +984,14 @@ try {
                     console.error('Error parsing editing form data:', e);
                     alert('Error updating form');
                 }
+            } else if (editingFormDataStr && hasSeenUpdateModal !== 'true') {
+                // FIRST UPDATE - Show modal with disabled fields
+                console.log('First update - showing modal with disabled fields');
+                sessionStorage.setItem('hasSeenUpdateModal', 'true');
+                $('#formDetailsModal').modal('show');
             } else {
-                // Show form details modal for new form
+                // NEW FORM MODE - Show modal for details
+                console.log('New form - showing modal for form details');
                 $('#formDetailsModal').modal('show');
             }
         });
@@ -1130,6 +1128,24 @@ if (typeof $ !== 'undefined') {
                 });
             }
             
+            // Check if in edit mode
+            var editingFormDataStr = sessionStorage.getItem('editingFormData');
+            if (editingFormDataStr) {
+                // EDIT MODE - Disable form details fields and change button text
+                $('#formNameInput').prop('disabled', true);
+                $('#formTitleInput').prop('disabled', true);
+                $('#tagInput').prop('disabled', true);
+                $('#saveFormDetails').text('Update').removeClass('btn-primary').addClass('btn-success');
+                console.log('✓ Edit mode: Form details disabled, button changed to Update');
+            } else {
+                // NEW FORM MODE - Enable form details fields and set button to Save
+                $('#formNameInput').prop('disabled', false);
+                $('#formTitleInput').prop('disabled', false);
+                $('#tagInput').prop('disabled', false);
+                $('#saveFormDetails').text('Save').removeClass('btn-success').addClass('btn-primary');
+                console.log('✓ Create mode: Form details enabled, button set to Save');
+            }
+            
             console.log('✓ Modal populated with form data');
             $('#formDetailsModal').modal('show');
             console.log('✓ Modal opened');
@@ -1198,22 +1214,124 @@ if (typeof $ !== 'undefined') {
                 return;
             }
             
+            if (!builderInstance) {
+                alert('Builder not loaded yet');
+                return;
+            }
+
+            const formSchema = builderInstance.schema;
+            
+            if (!formSchema || !formSchema.components || formSchema.components.length === 0) {
+                alert('No form created yet. Please add components first.');
+                return;
+            }
+            
             // Update the current form name
             currentFormName = newFormName;
             
             // Update the form name in the navbar
             $('.form-name-input').val(newFormName);
             
-            console.log('✓ Form details saved:', {
+            console.log('✓ Form details prepared:', {
                 formName: newFormName,
                 formTitle: $('#formTitleInput').val(),
-                tags: formTags
+                tags: formTags,
+                schema: formSchema
             });
             
-            // Close modal
-            $('#formDetailsModal').modal('hide');
+            // Disable the save button while saving
+            $(this).prop('disabled', true).text('Saving...');
+            const self = this;
             
-            alert('Form details saved successfully!');
+            // Check if we're updating an existing form
+            var editingFormDataStr = sessionStorage.getItem('editingFormData');
+            
+            if (editingFormDataStr) {
+                // Update existing form
+                try {
+                    var editingFormData = JSON.parse(editingFormDataStr);
+                    console.log('Updating existing form:', editingFormData.formId);
+                    
+                    var updateData = {
+                        formId: editingFormData.formId,
+                        formName: editingFormData.formName,
+                        formTitle: editingFormData.formTitle,
+                        formTags: editingFormData.formTags,
+                        formJson: JSON.stringify(formSchema)
+                    };
+                    
+                    FormBuilderApi.updateForm(updateData,
+                        function(response) {
+                            console.log('Form updated successfully:', response);
+                            $('#formDetailsModal').modal('hide');
+                            alert('Form updated successfully!');
+                            $(self).prop('disabled', false).text('Update');
+                        },
+                        function(error) {
+                            console.error('Error updating form:', error);
+                            alert('Error updating form: ' + error);
+                            $(self).prop('disabled', false).text('Update');
+                        }
+                    );
+                } catch (e) {
+                    console.error('Error parsing editing form data:', e);
+                    alert('Error updating form');
+                    $(self).prop('disabled', false).text('Update');
+                }
+            } else {
+                // Save new form
+                var saveData = {
+                    formName: newFormName,
+                    formTitle: $('#formTitleInput').val() || newFormName,
+                    formTags: formTags.join(','),
+                    formJson: JSON.stringify(formSchema)
+                };
+                
+                FormBuilderApi.saveForm(saveData,
+                    function(response) {
+                        console.log('Form saved successfully:', response);
+                        
+                        // Store the new form as editing data for next updates
+                        // Use returned FormId, or generate one if not returned or is zeros
+                        let formId = response.formId;
+                        if (!formId || formId === '00000000-0000-0000-0000-000000000000') {
+                            // Generate a GUID on the frontend as fallback
+                            formId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+                                var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+                                return v.toString(16);
+                            });
+                            console.log('Generated FormId on frontend:', formId);
+                        }
+                        
+                        console.log('Storing FormId for future updates:', formId);
+                        sessionStorage.setItem('editingFormData', JSON.stringify({
+                            formId: formId,
+                            formName: saveData.formName,
+                            formTitle: saveData.formTitle,
+                            formTags: saveData.formTags,
+                            formJson: saveData.formJson
+                        }));
+                        sessionStorage.setItem('hasSeenUpdateModal', 'true'); // Already seen modal on first save
+                        console.log('✓ Form is now marked as existing form for quick updates');
+                        
+                        // Close modal
+                        $('#formDetailsModal').modal('hide');
+                        alert('Form saved successfully!');
+                        // Clear form name input and reset
+                        $('#formNameInput').val('');
+                        formTags = [];
+                        $('#tagContainer').empty();
+                        // Re-enable the button
+                        $(self).prop('disabled', false).text('Save');
+                    },
+                    function(error) {
+                        console.error('Error saving form:', error);
+                        alert('Error saving form: ' + error);
+                        // Re-enable the button
+                        $(self).prop('disabled', false).text('Save');
+                    }
+                );
+            }
         });
 
         console.log('✓ jQuery modal and form details initialized');

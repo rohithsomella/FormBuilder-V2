@@ -9,7 +9,7 @@ var FormBuilderApi = (function() {
 
     // Configuration
     var config = {
-        baseUrl: 'https://localhost:7286/api/forms',
+        baseUrl: 'http://localhost:5155/api/forms',
         contentType: 'application/json'
     };
 
@@ -148,14 +148,57 @@ var FormBuilderApi = (function() {
     }
 
     /**
-     * Update form configuration (uses SaveForm endpoint)
+     * Update form configuration (uses UpdateForm endpoint)
      * @param {Object} formData - The form data object
+     * @param {String} formData.formId - Form ID (GUID)
+     * @param {String} formData.formName - Form name
+     * @param {String} formData.formTitle - Form title
+     * @param {String} formData.formTags - Form tags
+     * @param {String} formData.formJson - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
     function updateForm(formData, onSuccess, onError) {
-        // Since we're using SaveForm SP, we use the same endpoint
-        saveForm(formData, onSuccess, onError);
+        if (!formData || !formData.formId) {
+            console.error('Form data with formId is required');
+            if (onError) {
+                onError('Form data with formId is required', 400);
+            }
+            return;
+        }
+
+        // Prepare the request payload
+        var payload = {
+            formId: formData.formId,
+            formName: formData.formName || '',
+            formTitle: formData.formTitle || '',
+            formTags: formData.formTags || '',
+            formJson: formData.formJson || ''
+        };
+
+        $.ajax({
+            url: config.baseUrl + '/' + formData.formId,
+            type: 'PUT',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            success: function(response) {
+                console.log('Form updated successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error updating form:', error);
+                var errorMessage = 'Error updating form';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
     }
 
     /**

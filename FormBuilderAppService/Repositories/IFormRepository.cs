@@ -6,6 +6,7 @@ namespace FormBuilderAppService.Repositories
     {
         List<Form> GetForms();
         Form GetFormById(Guid formId);
-        void SaveForm(Form model);
+        Guid SaveForm(Form model);
+        void UpdateForm(Form model);
     }
 }

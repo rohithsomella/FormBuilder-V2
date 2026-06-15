@@ -43,8 +43,11 @@ AS
 BEGIN
     SET NOCOUNT ON;
 
+    DECLARE @NewFormId UNIQUEIDENTIFIER = NEWID();
+
     INSERT INTO dbo.Forms
     (
+        FormId,
         FormName,
         FormTitle,
         FormTags,
@@ -52,11 +55,43 @@ BEGIN
     )
     VALUES
     (
+        @NewFormId,
         @FormName,
         @FormTitle,
         @FormTags,
         @FormJson
     );
+
+    SET NOCOUNT OFF;
+    SELECT @NewFormId AS FormId;
+END
+GO
+
+
+/*=========================================================
+    PROCEDURE : UpdateForm
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.UpdateForm
+(
+    @FormId UNIQUEIDENTIFIER,
+    @FormName NVARCHAR(200),
+    @FormTitle NVARCHAR(200),
+    @FormTags NVARCHAR(500),
+    @FormJson NVARCHAR(MAX)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Forms
+    SET 
+        FormName = @FormName,
+        FormTitle = @FormTitle,
+        FormTags = @FormTags,
+        FormJson = @FormJson
+    WHERE FormId = @FormId
+      AND IsDeleted = 0;
 END
 GO
 

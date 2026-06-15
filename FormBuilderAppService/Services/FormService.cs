@@ -22,9 +22,14 @@ namespace FormBuilderAppService.Services
             return _formRepository.GetFormById(formId);
         }
 
-        public void SaveForm(Form model)
+        public Guid SaveForm(Form model)
         {
-            _formRepository.SaveForm(model);
+            return _formRepository.SaveForm(model);
+        }
+
+        public void UpdateForm(Form model)
+        {
+            _formRepository.UpdateForm(model);
         }
     }
 }
