@@ -196,13 +196,13 @@ if prompted.
 Example:
 
 ```text
-http://localhost:8080/test.html
+http://localhost:8080/homePage.html
 ```
 
 or
 
 ```text
-http://localhost:8080/index.html
+http://localhost:8080/homePage.html
 ```
 
 ---
