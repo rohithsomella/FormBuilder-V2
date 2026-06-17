@@ -1200,51 +1200,6 @@ try {
     console.error('Error setting up theme toggle:', err);
 }
 
-// Menu Toggle Functions
-function toggleMenu() {
-    try {
-        const menu = document.getElementById('dropdownMenu');
-        const overlay = document.getElementById('menuOverlay');
-        
-        if (menu && overlay) {
-            menu.classList.toggle('show');
-            overlay.classList.toggle('show');
-        } else {
-            console.log('Warning: menu or overlay not found');
-        }
-    } catch (err) {
-        console.error('Error toggling menu:', err);
-    }
-}
-
-// Close menu when clicking on overlay (attach directly, not in DOMContentLoaded)
-try {
-    const overlay = document.getElementById('menuOverlay');
-    const menu = document.getElementById('dropdownMenu');
-    
-    if (overlay && menu) {
-        overlay.addEventListener('click', function() {
-            if (menu) {
-                menu.classList.remove('show');
-                overlay.classList.remove('show');
-            }
-        });
-        
-        // Close menu when clicking on menu items
-        const menuItems = menu.querySelectorAll('.dropdown-menu-items a');
-        menuItems.forEach(link => {
-            link.addEventListener('click', function() {
-                menu.classList.remove('show');
-                overlay.classList.remove('show');
-            });
-        });
-    } else {
-        console.log('Warning: menu or overlay not found for event listeners');
-    }
-} catch (err) {
-    console.error('Error setting up menu event listeners:', err);
-}
-
 // Form Details Modal - Wait for jQuery to be available
 console.log('=== Checking jQuery availability ===');
 console.log('typeof $:', typeof $);
