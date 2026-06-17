@@ -10,6 +10,7 @@ import CurrencyComponent from './currency/Currency';
 import DataGridComponent from './datagrid/DataGrid';
 import DataMapComponent from './datamap/DataMap';
 import DataPopupComponent from './datapopup/DataPopup';
+import DynamicSelectionPanelsComponent from './dynamicselectionpanels/DynamicSelectionPanels';
 import DateTimeComponent from './datetime/DateTime';
 import DayComponent from './day/Day';
 import EditGridComponent from './editgrid/EditGrid';
@@ -62,6 +63,7 @@ export default {
   datagrid: DataGridComponent,
   datamap: DataMapComponent,
   datapopup: DataPopupComponent,
+  dynamicselectionpanels: DynamicSelectionPanelsComponent,
   datetime: DateTimeComponent,
   day: DayComponent,
   editgrid: EditGridComponent,

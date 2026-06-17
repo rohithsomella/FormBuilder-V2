@@ -966,7 +966,48 @@ try {
 
                 // Get just the data part of the submission
                 var submissionData = submission.data;
-                console.log('📋 Submission data:', submissionData);
+                console.log('📋 Original submission data:', submissionData);
+
+                // Recursively search for and transform dynamicSelectionPanels at any level
+                var transformDynamicSelectionPanels = function(data, depth) {
+                    depth = depth || 0;
+                    if (depth > 10) return; // Prevent infinite recursion
+                    
+                    if (!data || typeof data !== 'object') return;
+                    
+                    for (var key in data) {
+                        if (data.hasOwnProperty(key)) {
+                            var value = data[key];
+                            
+                            // Found dynamicSelectionPanels
+                            if (key === 'dynamicSelectionPanels' && value && value.selectSections !== undefined) {
+                                console.log('🔍 Found dynamicSelectionPanels at level', depth, ', transforming...');
+                                
+                                // Get the component instance
+                                var dynamicPanelsComponent = formInstance.getComponent('dynamicSelectionPanels');
+                                
+                                if (dynamicPanelsComponent && typeof dynamicPanelsComponent.getSelectSectionsData === 'function') {
+                                    console.log('✅ Got dynamicPanelsComponent, calling getSelectSectionsData()');
+                                    var selectSectionsData = dynamicPanelsComponent.getSelectSectionsData();
+                                    value.selectSections = selectSectionsData;
+                                    console.log('✅ Transformed selectSections to:', selectSectionsData);
+                                } else {
+                                    console.warn('⚠️ Could not find dynamicPanelsComponent or getSelectSectionsData method');
+                                }
+                            }
+                            
+                            // Recursively check nested objects
+                            if (typeof value === 'object' && value !== null) {
+                                transformDynamicSelectionPanels(value, depth + 1);
+                            }
+                        }
+                    }
+                };
+                
+                // Start recursive search from submission data
+                transformDynamicSelectionPanels(submissionData);
+
+                console.log('📋 Transformed submission data:', submissionData);
                 console.log('FormBuilderApi:', FormBuilderApi);
 
                 if (typeof FormBuilderApi === 'undefined') {
@@ -1001,7 +1042,11 @@ try {
                         }, 5000);
 
                         // Reset the form
-                        formInstance.reset();
+                        if (formInstance && typeof formInstance.clear === 'function') {
+                            formInstance.clear();
+                        } else if (formInstance) {
+                            formInstance.submission = { data: {} };
+                        }
                     },
                     function(error, statusCode) {
                         console.error('❌ Error submitting form:', error);
