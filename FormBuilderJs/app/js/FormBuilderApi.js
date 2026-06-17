@@ -389,7 +389,7 @@ var FormBuilderApi = (function() {
         filteredForms: [],
         currentPage: 1,
         currentPageSet: 1,
-        itemsPerPage: 5,
+        itemsPerPage: 10,
         pagesPerSet: 5
     };
 
@@ -429,9 +429,8 @@ var FormBuilderApi = (function() {
         // Filter by search term
         paginationState.filteredForms = paginationState.allForms.filter(function(form) {
             var name = (form.formName || '').toLowerCase();
-            var title = (form.formTitle || '').toLowerCase();
             var tags = (form.formTags || '').toLowerCase();
-            return name.includes(searchTerm) || title.includes(searchTerm) || tags.includes(searchTerm);
+            return name.includes(searchTerm) || tags.includes(searchTerm);
         });
 
         // Sort forms
@@ -477,9 +476,8 @@ var FormBuilderApi = (function() {
         pageItems.forEach(function(form) {
             var row = document.createElement('tr');
             row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
-                '<td>' + escapeHtml(form.formTitle || '') + '</td>' +
-                '<td>' + escapeHtml(form.formTags || '') + '</td>' +
-                '<td>' +
+                '<td style="text-align: right;">' + escapeHtml(form.formTags || '') + '</td>' +
+                '<td style="text-align: right;">' +
                 '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
@@ -576,6 +574,141 @@ var FormBuilderApi = (function() {
     }
 
     /**
+     * Load and populate reports table (reuses forms pagination)
+     */
+    function loadReportsTable() {
+        getAllForms(
+            function(forms) {
+                populateReportsTable(forms);
+            },
+            function(error, statusCode) {
+                console.error('Failed to load forms for reports:', error);
+                showNoReportsMessage(error);
+            }
+        );
+    }
+
+    /**
+     * Populate the reports table with form data (reuses forms pagination)
+     * @param {Array} forms - Array of form objects
+     */
+    function populateReportsTable(forms) {
+        var tableBody = document.getElementById('reportsTableBody');
+        var loadingMessage = document.getElementById('reportsLoadingMessage');
+        var reportsTable = document.getElementById('reportsTable');
+        var tableControls = document.getElementById('tableControls');
+        var paginationControls = document.getElementById('paginationControls');
+
+        if (!tableBody || !loadingMessage || !reportsTable) {
+            console.error('Required reports table elements not found in DOM');
+            return;
+        }
+
+        tableBody.innerHTML = '';
+
+        if (!forms || forms.length === 0) {
+            showNoReportsMessage('No forms available');
+            if (tableControls) tableControls.style.display = 'none';
+            if (paginationControls) paginationControls.style.display = 'none';
+            return;
+        }
+
+        // Store forms and initialize pagination (reuse existing paginationState)
+        paginationState.allForms = forms;
+        paginationState.filteredForms = forms;
+        paginationState.currentPage = 1;
+        paginationState.currentPageSet = 1;
+
+        loadingMessage.style.display = 'none';
+        reportsTable.style.display = 'table';
+        if (tableControls) tableControls.style.display = 'flex';
+        if (paginationControls) paginationControls.style.display = 'flex';
+
+        // Initialize controls and display (reuse existing functions with reports context)
+        initializeSearchAndFilter();
+        displayReportsPage();
+        renderReportsPaginationControls();
+    }
+
+    /**
+     * Display reports for current page (reports-specific renderer)
+     */
+    function displayReportsPage() {
+        var tableBody = document.getElementById('reportsTableBody');
+        var reportsTable = document.getElementById('reportsTable');
+
+        if (!tableBody || !reportsTable) {
+            return;
+        }
+
+        tableBody.innerHTML = '';
+
+        var startIndex = (paginationState.currentPage - 1) * paginationState.itemsPerPage;
+        var endIndex = startIndex + paginationState.itemsPerPage;
+        var pageItems = paginationState.filteredForms.slice(startIndex, endIndex);
+
+        pageItems.forEach(function(form) {
+            var row = document.createElement('tr');
+            row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
+                '<td style="text-align: right;">' +
+                '<button class="btn btn-sm btn-info" title="Generate Report" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.generateReport(\'' + form.formId + '\')">' +
+                '<i class="bi bi-file-earmark-pdf"></i> Generate Report' +
+                '</button>' +
+                '</td>';
+            tableBody.appendChild(row);
+        });
+
+        reportsTable.style.display = 'table';
+    }
+
+    /**
+     * Render pagination controls for reports
+     */
+    function renderReportsPaginationControls() {
+        var totalPages = Math.ceil(paginationState.filteredForms.length / paginationState.itemsPerPage);
+        var pageNumbersDiv = document.getElementById('pageNumbers');
+        var nextPageBtn = document.getElementById('nextPageBtn');
+        var prevPageBtn = document.getElementById('prevPageBtn');
+        var paginationInfo = document.getElementById('paginationInfo');
+
+        if (!pageNumbersDiv) {
+            return;
+        }
+
+        pageNumbersDiv.innerHTML = '';
+
+        var startPage = (paginationState.currentPageSet - 1) * paginationState.pagesPerSet + 1;
+        var endPage = Math.min(startPage + paginationState.pagesPerSet - 1, totalPages);
+
+        for (var i = startPage; i <= endPage; i++) {
+            var btn = document.createElement('button');
+            btn.className = 'page-btn' + (i === paginationState.currentPage ? ' active' : '');
+            btn.textContent = i;
+            btn.onclick = function(page) {
+                return function() {
+                    paginationState.currentPage = page;
+                    displayReportsPage();
+                    renderReportsPaginationControls();
+                };
+            }(i);
+            pageNumbersDiv.appendChild(btn);
+        }
+
+        if (prevPageBtn) {
+            prevPageBtn.style.display = startPage > 1 ? 'inline-block' : 'none';
+            prevPageBtn.disabled = startPage <= 1;
+        }
+
+        if (nextPageBtn) {
+            nextPageBtn.style.display = endPage < totalPages ? 'inline-block' : 'none';
+        }
+
+        if (paginationInfo) {
+            paginationInfo.textContent = 'Page ' + paginationState.currentPage + ' of ' + totalPages;
+        }
+    }
+
+    /**
      * Submit form submission data to the backend
      * @param {String} formId - The form ID
      * @param {Object} submissionData - The form submission data object
@@ -625,6 +758,80 @@ var FormBuilderApi = (function() {
         });
     }
 
+    /**
+     * Show no reports message
+     * @param {String} message - Message to display
+     */
+    function showNoReportsMessage(message) {
+        var loadingMessage = document.getElementById('reportsLoadingMessage');
+        var reportsTable = document.getElementById('reportsTable');
+        
+        if (loadingMessage) {
+            loadingMessage.className = 'alert alert-warning';
+            loadingMessage.innerHTML = '<i class="bi bi-exclamation-circle"></i> <strong>' + escapeHtml(message) + '</strong>';
+            loadingMessage.style.display = 'block';
+        }
+        
+        if (reportsTable) {
+            reportsTable.style.display = 'none';
+        }
+    }
+
+    /**
+     * Get form submissions for a form
+     * @param {String} formId - The form ID
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function getFormSubmissions(formId, onSuccess, onError) {
+        if (!formId) {
+            console.error('Form ID is required');
+            if (onError) {
+                onError('Form ID is required', 400);
+            }
+            return;
+        }
+
+        var submissionsUrl = config.baseUrl.replace('/api/forms', '/api/formsubmissions') + '/form/' + formId;
+        
+        console.log('Fetching submissions from:', submissionsUrl);
+
+        $.ajax({
+            url: submissionsUrl,
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function(response) {
+                console.log('Form submissions retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error retrieving form submissions:', error);
+                var errorMessage = 'Error retrieving form submissions';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Generate report for a form - wrapper that delegates to reports.js
+     * @param {String} formId - The form ID
+     */
+    function generateReport(formId) {
+        if (typeof window.generateReport === 'function') {
+            window.generateReport(formId);
+        } else {
+            console.error('generateReport function not found in reports.js');
+        }
+    }
+
     // Public API
     return {
         getAllForms: getAllForms,
@@ -632,11 +839,14 @@ var FormBuilderApi = (function() {
         saveForm: saveForm,
         updateForm: updateForm,
         loadFormsTable: loadFormsTable,
+        loadReportsTable: loadReportsTable,
         editForm: editForm,
         viewForm: viewForm,
         copyForm: copyForm,
         launchForm: launchForm,
         deleteForm: deleteForm,
+        generateReport: generateReport,
+        getFormSubmissions: getFormSubmissions,
         previousPage: previousPage,
         nextPage: nextPage,
         submitFormData: submitFormData,
