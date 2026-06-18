@@ -828,13 +828,11 @@ try {
 }
 
 //
-// Preview Form in Modal Dialog (Same Page)
+// Shared Preview Form Function (Dialog or Page Mode)
 //
-try {
-    const previewFormBtn = document.getElementById('previewForm');
-    if (previewFormBtn) {
-        previewFormBtn.addEventListener('click', function(){
-
+function PreviewFormWithMode(mode) {
+    console.log('PreviewFormWithMode called with mode:', mode);
+    
     if (!builderInstance) {
         alert('Builder not loaded yet');
         return;
@@ -848,6 +846,15 @@ try {
         return;
     }
 
+    if (mode === 'page') {
+        // Store schema in sessionStorage and open new page
+        console.log('📄 Opening form preview in new page');
+        sessionStorage.setItem('previewFormSchema', JSON.stringify(formSchema));
+        window.open('previewPage.html', '_blank');
+        return;
+    }
+
+    // Dialog mode (default)
     console.log('Opening form preview in modal:', formSchema);
 
     // Create overlay
@@ -965,137 +972,19 @@ try {
             // Handle form submission - try the primary event
             form.on('submitForm', function(submission) {
                 console.log('🔔 SUBMITFORM EVENT FIRED!', submission);
-                handleFormSubmission(submission, form);
+                handleFormSubmission(submission, form, formContainer);
             });
 
             // Also try alternative events
             form.on('submit', function(submission) {
                 console.log('🔔 SUBMIT EVENT FIRED!', submission);
-                handleFormSubmission(submission, form);
+                handleFormSubmission(submission, form, formContainer);
             });
 
             // Also listen for form errors
             form.on('error', function(error) {
                 console.error('Form error:', error);
             });
-
-            function handleFormSubmission(submission, formInstance) {
-                console.log('📤 Handling form submission...');
-                
-                // Get the form ID if we're editing an existing form
-                var editingFormId = sessionStorage.getItem('editingFormId');
-                console.log('Editing form ID from session:', editingFormId);
-                
-                if (!editingFormId) {
-                    console.warn('❌ No form ID found - form not saved yet. Please save the form first.');
-                    alert('Please save the form first before submitting.');
-                    return false;
-                }
-
-                // Get just the data part of the submission
-                var submissionData = submission.data;
-                console.log('📋 Original submission data:', submissionData);
-
-                // Recursively search for and transform dynamicSelectionPanels at any level
-                var transformDynamicSelectionPanels = function(data, depth) {
-                    depth = depth || 0;
-                    if (depth > 10) return; // Prevent infinite recursion
-                    
-                    if (!data || typeof data !== 'object') return;
-                    
-                    for (var key in data) {
-                        if (data.hasOwnProperty(key)) {
-                            var value = data[key];
-                            
-                            // Found dynamicSelectionPanels
-                            if (key === 'dynamicSelectionPanels' && value && value.selectSections !== undefined) {
-                                console.log('🔍 Found dynamicSelectionPanels at level', depth, ', transforming...');
-                                
-                                // Get the component instance
-                                var dynamicPanelsComponent = formInstance.getComponent('dynamicSelectionPanels');
-                                
-                                if (dynamicPanelsComponent && typeof dynamicPanelsComponent.getSelectSectionsData === 'function') {
-                                    console.log('✅ Got dynamicPanelsComponent, calling getSelectSectionsData()');
-                                    var selectSectionsData = dynamicPanelsComponent.getSelectSectionsData();
-                                    value.selectSections = selectSectionsData;
-                                    console.log('✅ Transformed selectSections to:', selectSectionsData);
-                                } else {
-                                    console.warn('⚠️ Could not find dynamicPanelsComponent or getSelectSectionsData method');
-                                }
-                            }
-                            
-                            // Recursively check nested objects
-                            if (typeof value === 'object' && value !== null) {
-                                transformDynamicSelectionPanels(value, depth + 1);
-                            }
-                        }
-                    }
-                };
-                
-                // Start recursive search from submission data
-                transformDynamicSelectionPanels(submissionData);
-
-                console.log('📋 Transformed submission data:', submissionData);
-                console.log('FormBuilderApi:', FormBuilderApi);
-
-                if (typeof FormBuilderApi === 'undefined') {
-                    console.error('❌ FormBuilderApi is NOT loaded!');
-                    alert('FormBuilderApi is not available');
-                    return false;
-                }
-
-                // Send to backend
-                console.log('🚀 Calling FormBuilderApi.submitFormData()');
-                FormBuilderApi.submitFormData(
-                    editingFormId,
-                    submissionData,
-                    function(response) {
-                        console.log('✅ Form submission saved successfully:', response);
-                        // Show success message
-                        var successMsg = document.createElement('div');
-                        successMsg.style.cssText = `
-                            padding: 15px;
-                            margin: 10px 20px;
-                            border-radius: 4px;
-                            background-color: #d4edda;
-                            border: 1px solid #c3e6cb;
-                            color: #155724;
-                        `;
-                        successMsg.innerHTML = '<i class="bi bi-check-circle"></i> <strong>Form submitted successfully!</strong> Submission ID: ' + response.submissionId;
-                        formContainer.insertBefore(successMsg, formContainer.firstChild);
-                        
-                        // Auto-hide after 5 seconds
-                        setTimeout(function() {
-                            successMsg.remove();
-                        }, 5000);
-
-                        // Reset the form
-                        if (formInstance && typeof formInstance.clear === 'function') {
-                            formInstance.clear();
-                        } else if (formInstance) {
-                            formInstance.submission = { data: {} };
-                        }
-                    },
-                    function(error, statusCode) {
-                        console.error('❌ Error submitting form:', error);
-                        // Show error message
-                        var errorMsg = document.createElement('div');
-                        errorMsg.style.cssText = `
-                            padding: 15px;
-                            margin: 10px 20px;
-                            border-radius: 4px;
-                            background-color: #f8d7da;
-                            border: 1px solid #f5c6cb;
-                            color: #721c24;
-                        `;
-                        errorMsg.innerHTML = '<i class="bi bi-exclamation-circle"></i> <strong>Error submitting form:</strong> ' + error;
-                        formContainer.insertBefore(errorMsg, formContainer.firstChild);
-                    }
-                );
-
-                // Prevent default submission
-                return false;
-            }
         })
         .catch(function(error) {
             console.error('Error loading form preview:', error);
@@ -1108,12 +997,38 @@ try {
             overlay.remove();
         }
     });
+}
+
+//
+// Preview Form Button Handler (Dialog Mode)
+//
+try {
+    const previewFormBtn = document.getElementById('previewForm');
+    if (previewFormBtn) {
+        previewFormBtn.addEventListener('click', function(){
+            PreviewFormWithMode('dialog');
         });
     } else {
         console.log('Warning: previewForm button not found');
     }
 } catch (err) {
     console.error('Error setting up previewForm button:', err);
+}
+
+//
+// Preview Form Page Button Handler (New Page Mode)
+//
+try {
+    const previewFormPageBtn = document.getElementById('previewFormPage');
+    if (previewFormPageBtn) {
+        previewFormPageBtn.addEventListener('click', function(){
+            PreviewFormWithMode('page');
+        });
+    } else {
+        console.log('Warning: previewFormPage button not found');
+    }
+} catch (err) {
+    console.error('Error setting up previewFormPage button:', err);
 }
 
 //
