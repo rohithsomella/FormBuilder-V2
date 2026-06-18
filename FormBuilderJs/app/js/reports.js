@@ -278,7 +278,130 @@ function exportToJson(submissions, formName) {
 }
 
 /**
- * Export submissions to CSV
+ * Flatten nested object to get leaf-level keys only
+ * @param {Object} obj - Object to flatten
+ * @param {String} prefix - Prefix for nested keys
+ * @returns {Object} Flattened object with leaf-level keys only
+ */
+function flattenObject(obj, prefix = '') {
+    var flattened = {};
+    
+    for (var key in obj) {
+        if (obj.hasOwnProperty(key)) {
+            var value = obj[key];
+            var newKey = prefix ? prefix + '.' + key : key;
+            
+            // Check if value is an object (but not null, date, or array)
+            if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
+                // Recursively flatten nested objects
+                var nested = flattenObject(value, newKey);
+                for (var nestedKey in nested) {
+                    if (nested.hasOwnProperty(nestedKey)) {
+                        flattened[nestedKey] = nested[nestedKey];
+                    }
+                }
+            } else if (Array.isArray(value)) {
+                // Handle arrays by joining with ", " delimiter
+                flattened[newKey] = value.map(function(item) {
+                    return typeof item === 'object' ? JSON.stringify(item) : String(item);
+                }).join(', ');
+            } else {
+                // Leaf-level value
+                flattened[newKey] = value;
+            }
+        }
+    }
+    
+    return flattened;
+}
+
+/**
+ * Escape CSV value to handle commas, quotes, and newlines
+ * @param {*} value - Value to escape
+ * @returns {String} Escaped value for CSV
+ */
+function escapeCsvValue(value) {
+    if (value === null || value === undefined) {
+        return '';
+    }
+    
+    var stringValue = String(value);
+    
+    // If value contains comma, double quote, or newline, wrap in quotes and escape quotes
+    if (stringValue.indexOf(',') !== -1 || stringValue.indexOf('"') !== -1 || stringValue.indexOf('\n') !== -1) {
+        return '"' + stringValue.replace(/"/g, '""') + '"';
+    }
+    
+    return stringValue;
+}
+
+/**
+ * Parse submission data - handles both JSON strings and objects
+ * @param {*} submissionData - Raw submission data from database
+ * @returns {Object} Parsed submission object
+ */
+function parseSubmissionData(submissionData) {
+    if (typeof submissionData === 'string') {
+        try {
+            return JSON.parse(submissionData);
+        } catch (e) {
+            console.error('Error parsing submission data:', e);
+            return { rawData: submissionData };
+        }
+    }
+    return submissionData;
+}
+
+/**
+ * Extract form data from submission object
+ * Handles various possible structures (data, submissionData, formData, or root level)
+ * @param {Object} submission - Submission object
+ * @returns {Object} Form data object
+ */
+function extractFormData(submission) {
+    // Check if submission has a specific data field
+    if (submission.data) {
+        var data = submission.data;
+        return typeof data === 'string' ? parseSubmissionData(data) : data;
+    }
+    
+    // Check for submissionData field
+    if (submission.submissionData) {
+        var submData = submission.submissionData;
+        return typeof submData === 'string' ? parseSubmissionData(submData) : submData;
+    }
+    
+    // Check for formData field
+    if (submission.formData) {
+        var formData = submission.formData;
+        return typeof formData === 'string' ? parseSubmissionData(formData) : formData;
+    }
+    
+    // Otherwise, assume root level contains the form data (but exclude metadata fields)
+    var formData = {};
+    var metadataFields = ['submissionId', 'formId', 'submissionDate', 'id', 'createdAt', 'updatedAt', 'userId'];
+    
+    for (var key in submission) {
+        if (submission.hasOwnProperty(key) && metadataFields.indexOf(key) === -1) {
+            var value = submission[key];
+            // Try to parse if it's a JSON string
+            if (typeof value === 'string' && (value.startsWith('{') || value.startsWith('['))) {
+                try {
+                    formData[key] = parseSubmissionData(value);
+                } catch (e) {
+                    formData[key] = value;
+                }
+            } else {
+                formData[key] = value;
+            }
+        }
+    }
+    
+    return formData;
+}
+
+/**
+ * Export submissions to CSV with flattened nested data
  * @param {Array} submissions - Array of submission objects
  * @param {String} formName - Name of the form
  */
@@ -288,11 +411,59 @@ function exportToCsv(submissions, formName) {
         return;
     }
 
-    var csv = 'Submission ID,Submission Date\n';
+    // Collect all unique leaf-level keys from all submissions
+    var allKeys = {};
+    var flattenedSubmissions = [];
+    
     submissions.forEach(function(submission) {
-        var submissionDate = new Date(submission.submissionDate);
-        var formattedDate = submissionDate.toLocaleString();
-        csv += '"' + (submission.submissionId || '') + '","' + formattedDate + '"\n';
+        // Extract the actual form data from the submission
+        var formData = extractFormData(submission);
+        
+        // Flatten the form data
+        var flattened = flattenObject(formData);
+        flattenedSubmissions.push(flattened);
+        
+        // Collect all keys
+        for (var key in flattened) {
+            if (flattened.hasOwnProperty(key)) {
+                allKeys[key] = true;
+            }
+        }
+    });
+    
+    // Sort keys for consistent column order
+    var sortedKeys = Object.keys(allKeys).sort();
+    
+    // Extract leaf-only key names for headers (remove path prefixes)
+    var leafKeyNames = sortedKeys.map(function(fullKey) {
+        // Get the last part after the final dot
+        var parts = fullKey.split('.');
+        return parts[parts.length - 1];
+    });
+    
+    // Create header row: Form Name, Form ID, Submission Date, then all other keys (leaf names only)
+    var headerRow = ['Form Name', 'Form ID', 'Submission Date'].concat(leafKeyNames);
+    var csv = headerRow.map(function(header) {
+        return escapeCsvValue(header);
+    }).join(',') + '\n';
+    
+    // Add data rows
+    submissions.forEach(function(submission, index) {
+        var flattened = flattenedSubmissions[index];
+        var rowValues = [
+            formName || '',
+            submission.formId || '',
+            submission.submissionDate ? new Date(submission.submissionDate).toLocaleString() : ''
+        ];
+        
+        // Add values for all keys (empty string if key not present in this submission)
+        sortedKeys.forEach(function(key) {
+            rowValues.push(flattened[key] !== undefined ? flattened[key] : '');
+        });
+        
+        csv += rowValues.map(function(value) {
+            return escapeCsvValue(value);
+        }).join(',') + '\n';
     });
 
     var dataBlob = new Blob([csv], { type: 'text/csv' });

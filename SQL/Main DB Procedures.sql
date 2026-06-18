@@ -200,11 +200,14 @@ BEGIN
     SET NOCOUNT ON;
 
     SELECT
-        SubmissionId,
-        FormId,
-        SubmissionData,
-        SubmissionDate
-    FROM dbo.FormSubmissions
-    WHERE SubmissionId = @SubmissionId;
+        fs.SubmissionId,
+        fs.FormId,
+        f.FormName,
+        fs.SubmissionData,
+        fs.SubmissionDate
+    FROM dbo.FormSubmissions fs
+    INNER JOIN dbo.Forms f
+        ON fs.FormId = f.FormId
+    WHERE fs.SubmissionId = @SubmissionId;
 END
 GO
