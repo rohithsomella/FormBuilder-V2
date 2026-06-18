@@ -171,6 +171,8 @@ function populateFormDetails() {
         }
         
         // Populate form name input
+        
+        $('.form-name-input').val(currentFormName);
         $('#formNameInput').val(currentFormName);
         
         // Merge tags: prioritize existing formTags, then add metadata tags
@@ -503,6 +505,78 @@ loadFormJsonIntoBuilder(initialFormSchema)
 });
 
 //
+// Clear Builder Function
+//
+function ClearBuilder() {
+    console.log("Opening new edit workspace");
+    
+    // Clear session storage
+    console.log('🧹 Clearing session storage...');
+    sessionStorage.removeItem('editingFormId');
+    sessionStorage.removeItem('editingFormData');
+    sessionStorage.removeItem('copyingFormData');
+    console.log('✓ Session storage cleared');
+    
+    // Reset builder and history
+    formHistory = [];
+    historyIndex = -1;
+    
+    // Reset form details
+    if (typeof $ !== 'undefined') {
+        console.log('🧹 Clearing form details...');
+        currentFormName = 'Untitled Form';
+        formTags = [];
+        $('#formNameInput').val('');
+        $('#formTitleInput').val('');
+        $('#tagContainer').empty();
+        $('#tagInput').val('');
+        console.log('✓ Form details cleared');
+    }
+    
+    // Reset the form name in navbar
+    $('.form-name-input').val('Untitled Form');
+    console.log('✓ Navbar form name reset to "Untitled Form"');
+    
+    // Close menu if open
+    const menu = document.getElementById('dropdownMenu');
+    const overlay = document.getElementById('menuOverlay');
+    if (menu) {
+        menu.classList.remove('show');
+    }
+    if (overlay) {
+        overlay.classList.remove('show');
+    }
+    
+    // Reset builder
+    Formio.builder(
+        document.getElementById('builder'),
+        {}
+    )
+    .then(function(builder){
+        builderInstance = builder;
+        console.log("New Builder Loaded");
+        
+        // Save initial state
+        console.log('💾 Saving new builder initial state...');
+        const newSchema = builderInstance.schema;
+        if (newSchema) {
+            formHistory.push(JSON.stringify(newSchema));
+            historyIndex++;
+            console.log('✓ New builder state saved. History length:', formHistory.length, 'Index:', historyIndex);
+        }
+        
+        // Attach change listener
+        if (builderInstance) {
+            console.log('📡 Attaching change event listener to new builder');
+            builderInstance.on('change', function(schema) {
+                console.log('📢 Change event fired! Components:', schema?.components?.length || 0);
+                saveFormState();
+            });
+        }
+    });
+}
+
+//
 // New Edit Button - Check if form is empty
 //
 try {
@@ -518,62 +592,7 @@ try {
                 showConfirmationPopup(
                     "Form is not saved yet, do you want to open new edit workspace?",
                     function() {
-                        console.log("Opening new edit workspace");
-                        
-                        // Clear session storage
-                        console.log('🧹 Clearing session storage...');
-                        sessionStorage.removeItem('editingFormId');
-                        sessionStorage.removeItem('editingFormData');
-                        sessionStorage.removeItem('copyingFormData');
-                        console.log('✓ Session storage cleared');
-                        
-                        // Reset builder and history
-                        formHistory = [];
-                        historyIndex = -1;
-                        
-                        // Reset form details
-                        if (typeof $ !== 'undefined') {
-                            console.log('🧹 Clearing form details...');
-                            currentFormName = 'Untitled Form';
-                            formTags = [];
-                            $('#formNameInput').val('');
-                            $('#formTitleInput').val('');
-                            $('#tagContainer').empty();
-                            $('#tagInput').val('');
-                            console.log('✓ Form details cleared');
-                        }
-                        
-                        // Reset the form name in navbar
-                        $('.form-name-input').val('Untitled Form');
-                        console.log('✓ Navbar form name reset to "Untitled Form"');
-                        
-                        // Reset builder
-                        Formio.builder(
-                            document.getElementById('builder'),
-                            {}
-                        )
-                        .then(function(builder){
-                            builderInstance = builder;
-                            console.log("New Builder Loaded");
-                            
-                            // Save initial state
-                            console.log('💾 Saving new builder initial state...');
-                            const newSchema = builderInstance.schema;
-                            if (newSchema) {
-                                formHistory.push(JSON.stringify(newSchema));
-                                historyIndex++;
-                                console.log('✓ New builder state saved. History length:', formHistory.length, 'Index:', historyIndex);
-                            }
-                            
-                            // Attach change listener
-                            if (builderInstance) {
-                                console.log('📡 Attaching change event listener to new builder');
-                                builderInstance.on('change', function(schema) {
-                                    console.log('📢 Change event fired! Components:', schema?.components?.length || 0);
-                                    saveFormState();
-                                });
-                            }
-                        });
+                        ClearBuilder();
                     },
                     function() {
                         console.log("Cancelled new edit workspace");
