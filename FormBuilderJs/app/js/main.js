@@ -772,6 +772,15 @@ try {
         return;
     }
 
+    // Prompt user for filename
+    const formName = $('#formNameInput').val().trim();
+    const defaultName = (formName && formName !== 'Untitled Form' ? formName + '.json' : 'form-' + new Date().getTime() + '.json');
+    const fileName = prompt('Enter filename for the JSON file:', defaultName);
+
+    if (!fileName) {
+        return;
+    }
+
     // Convert to JSON string with formatting
     const jsonString = JSON.stringify(formSchema, null, 2);
 
@@ -782,7 +791,7 @@ try {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = 'form-' + new Date().getTime() + '.json';
+    link.download = fileName;
 
     // Trigger download
     document.body.appendChild(link);
