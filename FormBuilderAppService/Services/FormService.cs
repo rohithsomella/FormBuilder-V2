@@ -32,5 +32,10 @@ namespace FormBuilderAppService.Services
         {
             _formRepository.UpdateForm(model);
         }
+
+        public void DeleteForm(Guid formId)
+        {
+            _formRepository.DeleteForm(formId);
+        }
     }
 }

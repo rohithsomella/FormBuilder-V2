@@ -396,8 +396,42 @@ var FormBuilderApi = (function() {
      */
     function deleteForm(formId) {
         console.log('Delete form:', formId);
-        // TODO: Implement form delete functionality
-        alert('Delete form: ' + formId);
+        
+        if (!formId) {
+            alert('Form ID is required');
+            return;
+        }
+
+        // Confirmation dialog
+        if (!confirm('Are you sure you want to delete this form? ')) {
+            console.log('Delete cancelled by user');
+            return;
+        }
+
+        $.ajax({
+            url: config.baseUrl + '/' + formId,
+            type: 'DELETE',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function(response) {
+                console.log('Form deleted successfully:', response);
+                alert('Form deleted successfully!');
+                // Refresh the forms table
+                loadFormsTable();
+            },
+            error: function(xhr, status, error) {
+                console.error('Error deleting form:', error);
+                var errorMessage = 'Error deleting form';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 404) {
+                    errorMessage = 'Form not found';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+                alert(errorMessage);
+            }
+        });
     }
 
     // Pagination state

@@ -84,5 +84,21 @@ namespace FormBuilderAppService.Controllers
             _formService.UpdateForm(model);
             return Ok(new { message = "Form updated successfully", formId = id });
         }
+
+        /// <summary>
+        /// Delete a form (soft delete - marks IsDeleted = 1)
+        /// </summary>
+        [HttpDelete("{id}")]
+        public ActionResult DeleteForm(Guid id)
+        {
+            var existingForm = _formService.GetFormById(id);
+            if (existingForm == null)
+            {
+                return NotFound(new { message = "Form not found" });
+            }
+
+            _formService.DeleteForm(id);
+            return Ok(new { message = "Form deleted successfully", formId = id });
+        }
     }
 }

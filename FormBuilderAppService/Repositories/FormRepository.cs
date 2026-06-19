@@ -93,5 +93,18 @@ namespace FormBuilderAppService.Repositories
                 );
             }
         }
+
+        public void DeleteForm(Guid formId)
+        {
+            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            {
+                connection.Open();
+                connection.Execute(
+                    "dbo.DeleteForm",
+                    new { @FormId = formId },
+                    commandType: CommandType.StoredProcedure
+                );
+            }
+        }
     }
 }

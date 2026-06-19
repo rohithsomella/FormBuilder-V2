@@ -8,5 +8,6 @@ namespace FormBuilderAppService.Repositories.Interfaces
         Form? GetFormById(Guid formId);
         Guid SaveForm(Form model);
         void UpdateForm(Form model);
+        void DeleteForm(Guid formId);
     }
 }
