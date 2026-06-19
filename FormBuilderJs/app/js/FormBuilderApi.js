@@ -332,8 +332,8 @@ var FormBuilderApi = (function() {
             alert('Form ID is required');
             return;
         }
-        // Navigate to preview page with form ID
-        window.location.href = 'previewPage.html?formId=' + formId;
+        // Fetch form and open preview page
+        launchForm(formId);
     }
 
     /**
@@ -364,13 +364,30 @@ var FormBuilderApi = (function() {
     }
 
     /**
-     * Launch form - open form in new window
+     * Launch form - open form preview in new window
      * @param {String} formId - The form ID to launch
      */
     function launchForm(formId) {
         console.log('Launch form:', formId);
-        // TODO: Implement form launch functionality
-        alert('Launch form: ' + formId);
+        if (!formId) {
+            alert('Form ID is required');
+            return;
+        }
+        
+        // Fetch the form from API
+        getFormById(formId, 
+            function(form) {
+                console.log('Form retrieved for preview:', form);
+                // Store form schema in sessionStorage
+                sessionStorage.setItem('previewFormSchema', form.formJson);
+                // Open preview page in new window
+                window.open('previewPage.html', '_blank');
+            },
+            function(error) {
+                console.error('Failed to load form for preview:', error);
+                alert('Error loading form: ' + error);
+            }
+        );
     }
 
     /**
@@ -481,13 +498,10 @@ var FormBuilderApi = (function() {
                 '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-success" title="View and submit form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.viewForm(\'' + form.formId + '\')">' +
-                '<i class="bi bi-eye"></i>' +
-                '</button> ' +
                 '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-copy"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-info" title="Launch form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-info" title="Preview form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
                 '<i class="bi bi-box-arrow-up-right"></i>' +
                 '</button> ' +
                 '<button class="btn btn-sm btn-danger" title="Delete form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.deleteForm(\'' + form.formId + '\')">' +
