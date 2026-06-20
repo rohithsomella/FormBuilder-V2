@@ -1106,7 +1106,7 @@ try {
 try {
     const themeBtn = document.getElementById("themeToggle");
     const themeCss = document.getElementById("themeStylesheet");
-
+    document.getElementById("builder").style.backgroundColor = "white";
     if (themeBtn && themeCss) {
         let darkMode = false;
 
@@ -1120,7 +1120,7 @@ try {
                 "https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/darkly/bootstrap.min.css";
 
                 document.body.classList.add("dark-mode");
-
+                document.getElementById("builder").style.backgroundColor = "#1e1e1e";
                 themeBtn.innerHTML =
                 '<i class="bi bi-sun-fill"></i>';
             }
@@ -1133,6 +1133,7 @@ try {
 
                 themeBtn.innerHTML =
                 '<i class="bi bi-moon-fill"></i>';
+                document.getElementById("builder").style.backgroundColor = "white";
             }
 
         });
