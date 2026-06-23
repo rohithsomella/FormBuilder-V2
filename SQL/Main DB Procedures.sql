@@ -211,3 +211,29 @@ BEGIN
     WHERE fs.SubmissionId = @SubmissionId;
 END
 GO
+
+/*=========================================================  
+    PROCEDURE : GetFormSubmissionReports  
+=========================================================*/  
+  
+REATE OR ALTER PROCEDURE dbo.GetFormSubmissionReports
+(
+    @FormId UNIQUEIDENTIFIER,
+    @FromDate DATETIME,
+    @ToDate DATETIME
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        SubmissionId,
+        FormId,
+        SubmissionData,
+        SubmissionDate
+    FROM dbo.FormSubmissions
+    WHERE FormId = @FormId
+      AND SubmissionDate >= @FromDate
+      AND SubmissionDate < DATEADD(DAY, 1, @ToDate)
+    ORDER BY SubmissionDate DESC;
+END

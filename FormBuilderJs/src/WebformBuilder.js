@@ -474,6 +474,10 @@ export default class WebformBuilder extends Component {
       premium: {
         title: 'Premium',
         weight: 40
+      },
+      existingResource: {
+        title: 'Existing Resource',
+        weight: 50
       }
     };
   }

@@ -11,6 +11,7 @@
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="../styles.css">
     <link rel="stylesheet" href="../css/builder.css">
+    <link rel="stylesheet" href="../css/addResource.css">
 
 </head>
 <body>
@@ -23,14 +24,60 @@
             <i class="bi bi-list"></i>
         </button>
         <h2>Add new Resource</h2>
+        <button class="info-btn" id="structureInfoBtn" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-html="true" title="Existing Resources">
+            <i class="bi bi-info-circle"></i>
+        </button>
     </div>
 
     <div class="menu-buttons"></div>
 </div>
 
-<div id="resourceContent" style="padding: 20px;">
-    <div class="alert alert-info">
-        <i class="bi bi-info-circle"></i> <strong>Add Resource Content</strong> - This page will be used to add new resources.
+<div id="resourceContent">
+    <div class="resource-lists-container">
+        <div class="resource-list-card">
+            <div class="resource-list-header">
+                <h3><i class="bi bi-database"></i> Add new Resource</h3>
+                <button class="btn btn-primary add-btn" data-type="resource" title="Add Resource">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="resource-list-body" id="resourceList">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No resources added yet</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="resource-list-card">
+            <div class="resource-list-header">
+                <h3><i class="bi bi-layers"></i> Add new Section</h3>
+                <button class="btn btn-primary add-btn" data-type="section" title="Add Section">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="resource-list-body" id="sectionList">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No sections added yet</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="resource-list-card">
+            <div class="resource-list-header">
+                <h3><i class="bi bi-puzzle"></i> Add new Component</h3>
+                <button class="btn btn-primary add-btn" data-type="component" title="Add Component">
+                    <i class="bi bi-plus-lg"></i> Add
+                </button>
+            </div>
+            <div class="resource-list-body" id="componentList">
+                <div class="empty-state">
+                    <i class="bi bi-inbox"></i>
+                    <p>No components added yet</p>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -40,6 +87,7 @@
 <script src="../js/CommonItems.js"></script>
 <script src="../js/main.js"></script>
 <script src="../js/FormBuilderApi.js"></script>
+<script src="../js/addResource.js"></script>
 
 </body>
 </html>

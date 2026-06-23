@@ -61,7 +61,8 @@ export default class PDFBuilder extends WebformBuilder {
       layout: false,
       data: false,
       premium: false,
-      resource: false
+      resource: false,
+      existingResource: false
     };
   }
 
