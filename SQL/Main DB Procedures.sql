@@ -215,10 +215,10 @@ GO
 /*=========================================================  
     PROCEDURE : GetFormSubmissionReports  
 =========================================================*/  
-  
-REATE OR ALTER PROCEDURE dbo.GetFormSubmissionReports
+ CREATE OR ALTER PROCEDURE dbo.GetFormSubmissionReports
 (
     @FormId UNIQUEIDENTIFIER,
+    @LocationID UNIQUEIDENTIFIER = NULL,
     @FromDate DATETIME,
     @ToDate DATETIME
 )
@@ -229,10 +229,17 @@ BEGIN
     SELECT
         SubmissionId,
         FormId,
+        PracticeID,
+        LocationID,
+        UserID,
+        PatientID,
+        IsDeleted,
         SubmissionData,
         SubmissionDate
     FROM dbo.FormSubmissions
     WHERE FormId = @FormId
+      AND (@LocationID IS NULL OR LocationID = @LocationID)
+      AND IsDeleted = 0
       AND SubmissionDate >= @FromDate
       AND SubmissionDate < DATEADD(DAY, 1, @ToDate)
     ORDER BY SubmissionDate DESC;
