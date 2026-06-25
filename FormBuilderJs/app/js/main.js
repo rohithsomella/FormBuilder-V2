@@ -469,6 +469,186 @@ loadFormJsonIntoBuilder(initialFormSchema)
         });
     }
 
+    // Load Custom Resources from API
+    console.log('🔄 Loading custom resources from API...');
+    const apiBaseUrl = 'http://localhost:5155';
+    
+    fetch(`${apiBaseUrl}/api/resources`)
+        .then(r => r.json())
+        .catch(e => {
+            console.error('Error fetching resources:', e);
+            return [];
+        })
+        .then((allResources) => {
+            console.log('✓ Custom resources loaded:', allResources.length);
+            
+            // Group resources by resourceType in JavaScript
+            const resourceGroups = [];
+            const groupMap = {};
+            
+            if (allResources && Array.isArray(allResources)) {
+                allResources.forEach(resource => {
+                    if (!groupMap[resource.resourceType]) {
+                        groupMap[resource.resourceType] = {
+                            resourceType: resource.resourceType,
+                            componentsList: [],
+                            itemCount: 0
+                        };
+                        resourceGroups.push(groupMap[resource.resourceType]);
+                    }
+                    groupMap[resource.resourceType].componentsList.push(resource.componentName);
+                    groupMap[resource.resourceType].itemCount++;
+                });
+            }
+            
+            if (!builderInstance.groups) {
+                builderInstance.groups = {};
+            }
+            
+            // Initialize custom resource map for lookup
+            if (!builderInstance.customResourcesMap) {
+                builderInstance.customResourcesMap = {};
+            }
+            
+            // Build the cache
+            if (allResources && Array.isArray(allResources)) {
+                allResources.forEach(resource => {
+                    const key = `${resource.resourceType}|${resource.componentName}`;
+                    builderInstance.customResourcesMap[key] = resource;
+                    console.log('✓ Cached resource:', key);
+                });
+            }
+            
+            // Create Custom Resource group if not exists
+            if (!builderInstance.groups.customResource) {
+                builderInstance.groups.customResource = {
+                    title: 'Custom Resource',
+                    key: 'customResource',
+                    weight: 50,
+                    subgroups: [],
+                    components: {},
+                    componentOrder: []
+                };
+            }
+            
+            // Add subgroups for each resource type
+            if (resourceGroups && Array.isArray(resourceGroups)) {
+                resourceGroups.forEach((resourceGroup, groupIndex) => {
+                    const resourceType = resourceGroup.resourceType || 'Unknown';
+                    const resourceKey = `customResource-${resourceType.replace(/\s+/g, '-')}`;
+                    
+                    const subgroup = {
+                        key: resourceKey,
+                        title: resourceType,
+                        components: {},
+                        componentOrder: [],
+                        default: groupIndex === 0,
+                    };
+                    
+                    // Parse components list
+                    let componentsList = [];
+                    if (typeof resourceGroup.componentsList === 'string') {
+                        componentsList = resourceGroup.componentsList.split(',').map(c => c.trim());
+                    } else if (Array.isArray(resourceGroup.componentsList)) {
+                        componentsList = resourceGroup.componentsList;
+                    }
+                    
+                    // Add each component
+                    componentsList.forEach((componentName) => {
+                        if (!componentName) return;
+                        
+                        const componentKey = `component-${componentName.replace(/\s+/g, '-')}`;
+                        subgroup.componentOrder.push(componentKey);
+                        subgroup.components[componentKey] = {
+                            title: componentName,
+                            key: componentKey,
+                            icon: 'fa fa-cube',
+                            schema: {
+                                type: 'panel',
+                                title: componentName,
+                                key: componentKey,
+                                label: componentName,
+                                components: [],
+                                isNew: true,
+                                resourceType: resourceType,
+                                componentName: componentName
+                            },
+                            group: 'customResource',
+                            subgroup: resourceKey
+                        };
+                    });
+                    
+                    builderInstance.groups.customResource.subgroups.push(subgroup);
+                    console.log('✓ Added subgroup:', resourceKey);
+                });
+                
+                // Patch getComponentInfo to handle custom resources
+                const originalGetComponentInfo = builderInstance.getComponentInfo;
+                if (originalGetComponentInfo && typeof originalGetComponentInfo === 'function') {
+                    builderInstance.getComponentInfo = function(key, group) {
+                        let info;
+                        
+                        // Handle custom resources
+                        if (group && group.indexOf('customResource-') === 0) {
+                            const customResourceGroups = this.groups.customResource.subgroups;
+                            const customResourceGroup = customResourceGroups.find(g => g.key === group);
+                            
+                            if (customResourceGroup && customResourceGroup.components[key]) {
+                                const componentDef = customResourceGroup.components[key];
+                                const resourceType = customResourceGroup.title;
+                                const componentName = componentDef.title;
+                                
+                                // Look up the actual resourceJson from cache
+                                if (this.customResourcesMap) {
+                                    const cacheKey = `${resourceType}|${componentName}`;
+                                    const resourceData = this.customResourcesMap[cacheKey];
+                                    
+                                    if (resourceData && resourceData.resourceJson) {
+                                        try {
+                                            // Parse the resourceJson and use it as the schema
+                                            info = typeof resourceData.resourceJson === 'string' 
+                                                ? JSON.parse(resourceData.resourceJson) 
+                                                : resourceData.resourceJson;
+                                            console.log('✓ Using resourceJson for component:', componentName);
+                                        } catch (e) {
+                                            console.error('✗ Error parsing resourceJson:', e);
+                                            info = JSON.parse(JSON.stringify(componentDef.schema));
+                                        }
+                                    } else {
+                                        info = JSON.parse(JSON.stringify(componentDef.schema));
+                                    }
+                                } else {
+                                    info = JSON.parse(JSON.stringify(componentDef.schema));
+                                }
+                                
+                                if (info) {
+                                    info.key = this.generateKey ? this.generateKey(info) : `${componentName}_${Date.now()}`;
+                                }
+                                return info;
+                            }
+                        }
+                        
+                        // Fall back to original implementation
+                        return originalGetComponentInfo.call(this, key, group);
+                    };
+                    console.log('✓ Patched getComponentInfo for custom resources');
+                }
+                
+                // Trigger redraw
+                if (typeof builderInstance.triggerRedraw === 'function') {
+                    builderInstance.triggerRedraw();
+                    console.log('✓ Builder redrawn with custom resources');
+                } else if (typeof builderInstance.redraw === 'function') {
+                    builderInstance.redraw();
+                    console.log('✓ Builder redrawn (using redraw)');
+                }
+            }
+        })
+        .catch(error => {
+            console.warn('⚠ Could not load custom resources:', error);
+        });
+
+
     // Wait for sidebar to be rendered, then add toggle button
     setTimeout(function() {
         const sidebar = document.querySelector('.formcomponents');

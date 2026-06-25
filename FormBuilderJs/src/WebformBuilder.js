@@ -283,6 +283,34 @@ export default class WebformBuilder extends Component {
         });
     }
 
+    // Load Custom Resources from backend API
+    const customResourceOptions = this.options.builder && this.options.builder.customResource;
+    const apiBaseUrl = 'http://localhost:5155'; // API base URL
+    
+    if (apiBaseUrl && !isResourcesDisabled) {
+      this.builder.customResource = {
+        title: customResourceOptions ? customResourceOptions.title : 'Custom Resource',
+        key: 'customResource',
+        weight: customResourceOptions ? customResourceOptions.weight : 50,
+        subgroups: [],
+        components: [],
+        componentOrder: []
+      };
+      this.groups.customResource = {
+        title: customResourceOptions ? customResourceOptions.title : 'Custom Resource',
+        key: 'customResource',
+        weight: customResourceOptions ? customResourceOptions.weight : 50,
+        subgroups: [],
+        components: [],
+        componentOrder: []
+      };
+      if (!this.groupOrder.includes('customResource')) {
+        this.groupOrder.push('customResource');
+      }
+
+      // NOTE: Custom resources are now loaded in main.js to avoid duplicate API calls
+    }
+
     // Notify components if they need to modify their render.
     this.options.attachMode = 'builder';
     this.webform = this.webform || this.createForm(this.options);
@@ -346,6 +374,79 @@ export default class WebformBuilder extends Component {
       }, true);
 
       this.groups.resource.subgroups.push(subgroup);
+    });
+
+    this.triggerRedraw();
+  }
+
+  addCustomResourceFields(allResources, resourceGroups) {
+    if (!resourceGroups || !Array.isArray(resourceGroups)) {
+      console.warn('No custom resources to add');
+      return;
+    }
+
+    // Initialize a map to store all resources for quick lookup
+    if (!this.customResourcesMap) {
+      this.customResourcesMap = {};
+    }
+
+    // Build a map of resources by resourceType and componentName for quick access
+    if (allResources && Array.isArray(allResources)) {
+      allResources.forEach(resource => {
+        const key = `${resource.resourceType}|${resource.componentName}`;
+        this.customResourcesMap[key] = resource;
+      });
+    }
+
+    _.each(resourceGroups, (resourceGroup, groupIndex) => {
+      const resourceType = resourceGroup.resourceType || 'Unknown';
+      const resourceKey = `customResource-${resourceType.replace(/\s+/g, '-')}`;
+      const subgroup = {
+        key: resourceKey,
+        title: resourceType,
+        components: [],
+        componentOrder: [],
+        default: groupIndex === 0,
+      };
+
+      // Parse components list (comma-separated or array)
+      let componentsList = [];
+      if (typeof resourceGroup.componentsList === 'string') {
+        componentsList = resourceGroup.componentsList.split(',').map(c => c.trim());
+      } else if (Array.isArray(resourceGroup.componentsList)) {
+        componentsList = resourceGroup.componentsList;
+      }
+
+      // Add each component as a draggable item
+      _.each(componentsList, (componentName, componentIndex) => {
+        if (!componentName) return;
+
+        const componentKey = `component-${componentName.replace(/\s+/g, '-')}`;
+        
+        // Create a placeholder schema that will be replaced with resourceJson on drag
+        const placeholderSchema = {
+          type: 'panel',
+          title: componentName,
+          key: componentKey,
+          label: componentName,
+          components: [],
+          isNew: true,
+          resourceType: resourceType,
+          componentName: componentName
+        };
+
+        subgroup.componentOrder.push(componentKey);
+        subgroup.components[componentKey] = {
+          title: componentName,
+          key: componentKey,
+          icon: 'fa fa-cube',
+          schema: placeholderSchema,
+          group: 'customResource',
+          subgroup: resourceKey
+        };
+      });
+
+      this.groups.customResource.subgroups.push(subgroup);
     });
 
     this.triggerRedraw();
@@ -475,8 +576,8 @@ export default class WebformBuilder extends Component {
         title: 'Premium',
         weight: 40
       },
-      existingResource: {
-        title: 'Existing Resource',
+      customResource: {
+        title: 'Custom Resource',
         weight: 50
       }
     };
@@ -826,6 +927,42 @@ export default class WebformBuilder extends Component {
       const resourceGroup = _.find(resourceGroups, { key: group });
       if (resourceGroup && resourceGroup.components.hasOwnProperty(`component-${key}`)) {
         info = fastCloneDeep(resourceGroup.components[`component-${key}`].schema);
+      }
+    }
+    // Handle custom resources
+    else if (group && group.slice(0, group.indexOf('-')) === 'customResource') {
+      const customResourceGroups = this.groups.customResource.subgroups;
+      const customResourceGroup = _.find(customResourceGroups, { key: group });
+      if (customResourceGroup && customResourceGroup.components.hasOwnProperty(key)) {
+        const componentDef = customResourceGroup.components[key];
+        const resourceType = customResourceGroup.title;
+        const componentName = componentDef.title;
+        
+        // Look up the actual resourceJson from cache
+        if (this.customResourcesMap) {
+          const cacheKey = `${resourceType}|${componentName}`;
+          const resourceData = this.customResourcesMap[cacheKey];
+          
+          if (resourceData && resourceData.resourceJson) {
+            try {
+              // Parse the resourceJson and use it as the schema
+              let parsedSchema = typeof resourceData.resourceJson === 'string' 
+                ? JSON.parse(resourceData.resourceJson) 
+                : resourceData.resourceJson;
+              
+              info = fastCloneDeep(parsedSchema);
+              console.log('✓ Using resourceJson for component:', componentName, 'from', resourceType);
+            } catch (e) {
+              console.error('✗ Error parsing resourceJson:', e);
+              info = fastCloneDeep(componentDef.schema);
+            }
+          } else {
+            console.warn('⚠ Resource not found in cache for:', resourceType, '|', componentName);
+            info = fastCloneDeep(componentDef.schema);
+          }
+        } else {
+          info = fastCloneDeep(componentDef.schema);
+        }
       }
     }
     // This is a new component
