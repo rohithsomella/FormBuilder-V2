@@ -1,21 +1,21 @@
-# 🚀 Form Builder Setup
+# 🚀 Form Builder v2 Setup
 
-Build and run **Form.io 4.21.2** locally, modify source code, and generate your own `formio.full.js` and `formio.full.css`.
+Build and run **Form.io v4.21.2** locally, customize the source code, and generate your own `formio.full.js` and `formio.full.css`.
 
 ---
 
-# 📁 Folder Structure
+# 📁 Project Structure
 
-```
+```text
 FORMBUILDER
 │
-├── FormBuilderAppService      ← .NET 8 Backend Web API
+├── FormBuilderAppService      ← .NET 8 Web API (Backend)
 │   ├── Controllers
 │   ├── Program.cs
 │   ├── appsettings.json
 │   └── ...
 │
-└── FormBuilderJs              ← formio.js Frontend
+└── FormBuilderJs              ← Form.io Source Code (Frontend)
     ├── app
     ├── src
     ├── dist
@@ -24,35 +24,25 @@ FORMBUILDER
 
 ---
 
-# 📥 Step 1: Download Source Code
+# 📥 1. Download Source
 
-Download Form.io **v4.21.2** source code:
-
-https://github.com/formio/formio.js/releases/tag/v4.21.2
-
-Extract the zip file.
-
-Example:
+Download **Form.io v4.21.2** and extract it.
 
 ```text
-D:\formio.js-4.21.2\formio.js-4.21.2
+https://github.com/formio/formio.js/releases/tag/v4.21.2
 ```
 
 ---
 
-# 🟢 Step 2: Install Node.js 18
-
-Form.io 4.21.2 works best with Node 18.
+# 🟢 2. Install Node.js 18
 
 ```bash
 nvm install 18
-
 nvm use 18
-
 node -v
 ```
 
-Expected output:
+Expected:
 
 ```text
 v18.x.x
@@ -60,146 +50,44 @@ v18.x.x
 
 ---
 
-# 🧹 Step 3: Clean Existing Packages
-
-Delete old dependencies:
+# 📦 3. Install Dependencies
 
 ```bash
 rmdir /s /q node_modules
-
 del package-lock.json
-```
 
-Install packages:
-
-```bash
 npm install
 ```
 
 ---
 
-# 🔨 Step 4: Build Form.io
-
-Run:
+# 🔨 4. Build Form.io
 
 ```bash
 npm run transpile
-
 npm run templates
-
 npx gulp build
 ```
 
-Expected output:
+Verify:
 
 ```text
-Finished 'build'
+dist/
+ ├── formio.full.js
+ └── formio.full.css
 ```
 
 ---
 
-# ✅ Step 5: Verify Generated Files
+# 🌐 5. Run Locally
 
-Go to:
-
-```text
-D:\formio.js-4.21.2\formio.js-4.21.2\dist
-```
-
-Verify these files exist:
-
-```text
-formio.full.js
-
-formio.full.css
-```
-
----
-
-# 🌐 Step 6: Create index.html
-
-Example:
-
-```html
-<!DOCTYPE html>
-<html>
-<head>
-
-<link rel="stylesheet"
-href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
-
-<link rel="stylesheet"
-href="dist/formio.full.css">
-
-</head>
-
-<body>
-
-<div id="builder"></div>
-
-<script src="dist/formio.full.js"></script>
-
-<script>
-
-Formio.builder(
-    document.getElementById('builder'),
-    {}
-);
-
-</script>
-
-</body>
-</html>
-```
-
----
-
-# ♻ Step 7: Rebuild After Source Changes
-
-Whenever you modify files inside:
-
-```text
-src
-app
-components
-templates
-```
-
-Run:
-
-```bash
-npm run transpile
-```
-
----
-
-# 🚀 Step 8: Start Local Server
-
-Start the web server:
+Start server:
 
 ```bash
 npx http-server
 ```
 
-Press:
-
-```text
-y
-```
-
-if prompted.
-
----
-
-# 🌍 Step 9: Open Browser
-
-Example:
-
-```text
-http://localhost:8080/homePage.html
-```
-
-or
+Open:
 
 ```text
 http://localhost:8080/homePage.html
@@ -209,27 +97,19 @@ http://localhost:8080/homePage.html
 
 # 🔄 Daily Workflow
 
-### Start Server
-
-```bash
-npx http-server
-```
-
----
-
-### Open Browser
+After modifying files inside:
 
 ```text
-http://localhost:8080
+src/
+app/
+components/
+templates/
 ```
 
----
-
-### After Modifying Source Files
+Run:
 
 ```bash
 npm run transpile
-
 npx gulp build
 ```
 
@@ -237,25 +117,66 @@ Refresh the browser.
 
 ---
 
-# 🎯 Features Available
+# 🎯 Frontend Features
 
-✅ Form Builder
+* Form Builder
+* Drag & Drop Components
+* JSON Generation
+* Form Rendering
+* Custom Components
+* Offline Usage
+* No Form.io Server Required
 
-✅ Drag & Drop Components
+---
 
-✅ Generate JSON
+# 🔗 Backend (.NET 8 Web API)
 
-✅ Render Forms
+The backend provides REST APIs to manage forms.
 
-✅ Modify Source Code
+```text
+GET    /api/forms
+GET    /api/forms/{id}
+POST   /api/forms
+PUT    /api/forms/{id}
+DELETE /api/forms/{id}
+```
 
-✅ Custom Components
+Responsibilities:
 
-✅ Offline Usage
+* Save forms
+* Retrieve forms
+* Update forms
+* Delete forms
+* Form versioning
+* API integration
 
-✅ No Form.io Server Required
+---
 
-✅ Save Forms and Reuse, Edit.
+# 🗄️ Database
+
+### ✅ v1
+
+* SQL Server
+* Dapper
+* Stored Procedures
+
+### ✅ v2
+
+* MongoDB
+* NoSQL document storage
+* Stores complete Form JSON as documents
+* Easier versioning and schema flexibility
+
+---
+
+# 🆕 What's New in v2
+
+* ✅ MongoDB replaces SQL Server
+* ✅ Simpler document-based storage
+* ✅ Better handling of dynamic Form.io JSON
+* ✅ Cleaner backend architecture
+* ✅ Easier form versioning
+* ✅ Faster development for schema changes
 
 ---
 
@@ -263,121 +184,40 @@ Refresh the browser.
 
 ```text
 Source Code
-     │
-     ▼
+      │
+      ▼
 npm install
-     │
-     ▼
+      │
+      ▼
 npm run transpile
-     │
-     ▼
+      │
+      ▼
 npm run templates
-     │
-     ▼
+      │
+      ▼
 npx gulp build
-     │
-     ▼
+      │
+      ▼
 dist/formio.full.js
 dist/formio.full.css
-     │
-     ▼
-index.html
-     │
-     ▼
+      │
+      ▼
+homePage.html
+      │
+      ▼
 npx http-server
-     │
-     ▼
-http://localhost:8080
+      │
+      ▼
+Browser
 ```
 
 ---
 
+# 📝 Notes
 
-# 📚 Notes
-
-* Use **Node.js 18**.
-* Run `npm run transpile` after source code changes.
-* Run `npx gulp build` to regenerate `formio.full.js`.
-* Refresh the browser to see changes.
-* Form.io server is not required.
-* Everything can run locally.
-
----
-# 🔗 Backend Connection
-
-The project contains two applications:
-
-```text
-FORMBUILDER
-│
-├── FormBuilderAppService      ← .NET 8 Web API (Backend)
-│
-└── FormBuilderJs              ← Form.io Source Code (Frontend)
-```
-
----
-
-## Frontend (FormBuilderJs)
-
-Purpose:
-
-* Display Form Builder UI.
-* Drag and drop components.
-* Generate Form JSON.
-* Render forms.
-* Modify Form.io source code.
-
-
-## Backend (FormBuilderAppService)
-
-Purpose:
-
-* Store form definitions in database.
-* Retrieve saved forms.
-* Update existing forms.
-* Delete forms.
-* Manage form versions.
-* Expose REST APIs for frontend.
-
-Example APIs:
-
-```text
-GET    /api/forms
-
-GET    /api/forms/{id}
-
-POST   /api/forms
-
-PUT    /api/forms/{id}
-
-DELETE /api/forms/{id}
-```
-
-## Why Use a Backend?
-
-Without backend:
-
-* Forms exist only in browser memory.
-* Closing the browser loses data.
-
-With backend:
-
-✅ Persistent storage
-
-✅ Database support
-
-✅ CRUD operations (Create, Read, Update, Delete)
-
-✅ Form versioning
-
-✅ Multiple users
-
-✅ Integration with existing applications
-
-✅ Centralized API layer
-
----
-
-> **Note:** Form Builder itself does not require a server. The .NET 8 backend is added to save and manage form definitions and provide APIs to other applications.
-
-# 🎉 Happy Coding!
+* Use **Node.js 18**
+* Run `npm run transpile` after source changes
+* Run `npx gulp build` to regenerate build files
+* Refresh the browser to view changes
+* Form.io Server is **not required**
+* Backend is used only for persistent form storage and APIs
