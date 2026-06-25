@@ -880,6 +880,131 @@ var FormBuilderApi = (function() {
         }
     }
 
+    /**
+     * Save a custom resource from Add Resource page
+     * @param {Object} resourceData - The resource data object
+     * @param {String} resourceData.resourceType - Resource type
+     * @param {String} resourceData.componentName - Component name
+     * @param {String} resourceData.description - Description (optional)
+     * @param {String} resourceData.json - Component JSON
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function saveResource(resourceData, onSuccess, onError) {
+        if (!resourceData) {
+            console.error('Resource data is required');
+            if (onError) {
+                onError('Resource data is required', 400);
+            }
+            return;
+        }
+
+        var resourceUrl = config.baseUrl.replace('/api/forms', '/api/resources');
+        
+        var payload = {
+            resourceType: resourceData.resourceType || resourceData.type,
+            componentName: resourceData.componentName,
+            description: resourceData.description || null,
+            resourceJson: resourceData.json
+        };
+
+        $.ajax({
+            url: resourceUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            success: function(response) {
+                console.log('Resource saved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error saving resource:', error);
+                var errorMessage = 'Error saving resource';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get all resources
+     * @param {String} resourceType - Optional resource type filter
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function getAllResources(resourceType, onSuccess, onError) {
+        var resourceUrl = config.baseUrl.replace('/api/forms', '/api/resources');
+        if (resourceType) {
+            resourceUrl += '?resourceType=' + encodeURIComponent(resourceType);
+        }
+
+        $.ajax({
+            url: resourceUrl,
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function(response) {
+                console.log('Resources retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error retrieving resources:', error);
+                var errorMessage = 'Error retrieving resources';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get all resources grouped by resource type
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function getResourcesList(onSuccess, onError) {
+        var resourceUrl = config.baseUrl.replace('/api/forms', '/api/resources') + '/grouped/list';
+
+        $.ajax({
+            url: resourceUrl,
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function(response) {
+                console.log('Grouped resources retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function(xhr, status, error) {
+                console.error('Error retrieving grouped resources:', error);
+                var errorMessage = 'Error retrieving grouped resources';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
     // Public API
     return {
         getAllForms: getAllForms,
@@ -898,6 +1023,9 @@ var FormBuilderApi = (function() {
         previousPage: previousPage,
         nextPage: nextPage,
         submitFormData: submitFormData,
+        saveResource: saveResource,
+        getAllResources: getAllResources,
+        getResourcesList: getResourcesList,
         config: config
     };
 

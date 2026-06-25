@@ -244,3 +244,161 @@ BEGIN
       AND SubmissionDate < DATEADD(DAY, 1, @ToDate)
     ORDER BY SubmissionDate DESC;
 END
+GO
+
+/*=========================================================
+    PROCEDURE : SaveResource
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.SaveResource
+(
+    @ResourceType NVARCHAR(50),
+    @ComponentName NVARCHAR(200),
+    @Description NVARCHAR(500),
+    @ResourceJson NVARCHAR(MAX)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    DECLARE @NewResourceId UNIQUEIDENTIFIER = NEWID();
+
+    INSERT INTO dbo.Resources
+    (
+        ResourceType,
+        ComponentName,
+        Description,
+        ResourceJson
+    )
+    VALUES
+    (
+        @ResourceType,
+        @ComponentName,
+        @Description,
+        @ResourceJson
+    );
+
+    SET NOCOUNT OFF;
+    SELECT @NewResourceId AS ResourceId;
+END
+GO
+
+/*=========================================================
+    PROCEDURE : GetResources
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.GetResources
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ResourceId,
+        ResourceType,
+        ComponentName,
+        Description,
+        ResourceJson,
+        CreatedDate,
+        ModifiedDate
+    FROM dbo.Resources
+    WHERE IsDeleted = 0
+    ORDER BY ResourceType, ComponentName;
+END
+GO
+
+/*=========================================================
+    PROCEDURE : GetResourceById
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.GetResourceById
+(
+    @ResourceId UNIQUEIDENTIFIER
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ResourceId,
+        ResourceType,
+        ComponentName,
+        Description,
+        ResourceJson,
+        CreatedDate,
+        ModifiedDate
+    FROM dbo.Resources
+    WHERE ResourceId = @ResourceId
+      AND IsDeleted = 0;
+END
+GO
+
+/*=========================================================
+    PROCEDURE : UpdateResource
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.UpdateResource
+(
+    @ResourceId UNIQUEIDENTIFIER,
+    @ResourceType NVARCHAR(50),
+    @ComponentName NVARCHAR(200),
+    @Description NVARCHAR(500),
+    @ResourceJson NVARCHAR(MAX)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Resources
+    SET
+        ResourceType = @ResourceType,
+        ComponentName = @ComponentName,
+        Description = @Description,
+        ResourceJson = @ResourceJson,
+        ModifiedDate = GETUTCDATE()
+    WHERE ResourceId = @ResourceId
+      AND IsDeleted = 0;
+END
+GO
+
+/*=========================================================
+    PROCEDURE : DeleteResource
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.DeleteResource
+(
+    @ResourceId UNIQUEIDENTIFIER
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Resources
+    SET 
+        IsDeleted = 1,
+        ModifiedDate = GETUTCDATE()
+    WHERE ResourceId = @ResourceId;
+END
+GO
+
+/*=========================================================
+    PROCEDURE : GetResourcesList
+    Returns resources grouped by ResourceType name
+    Useful for displaying resources organized by type
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.GetResourcesList
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        ResourceType,
+        COUNT(*) AS ItemCount,
+        STRING_AGG(ComponentName, ', ') AS ComponentsList,
+        MIN(CreatedDate) AS CreatedDate
+    FROM dbo.Resources
+    WHERE IsDeleted = 0
+    GROUP BY ResourceType
+    ORDER BY ResourceType;
+END
+GO

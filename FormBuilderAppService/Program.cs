@@ -37,6 +37,8 @@ builder.Services.AddScoped<IFormRepository, FormRepository>();
 builder.Services.AddScoped<IFormService, FormService>();
 builder.Services.AddScoped<IFormSubmissionRepository, FormSubmissionRepository>();
 builder.Services.AddScoped<IFormSubmissionService, FormSubmissionService>();
+builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
+builder.Services.AddScoped<IResourceService, ResourceService>();
 
 var app = builder.Build();
 

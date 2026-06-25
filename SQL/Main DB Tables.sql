@@ -55,3 +55,38 @@ CREATE TABLE dbo.FormSubmissions
 );
 GO
 
+/*=========================================================
+    TABLE : Resources
+=========================================================*/
+
+IF OBJECT_ID('dbo.Resources', 'U') IS NOT NULL
+BEGIN
+    DROP TABLE dbo.Resources;
+END
+GO
+
+CREATE TABLE dbo.Resources
+(
+    ResourceId UNIQUEIDENTIFIER NOT NULL
+        CONSTRAINT PK_Resources PRIMARY KEY
+        DEFAULT NEWID(),
+
+    ResourceType NVARCHAR(50) NOT NULL,
+
+    ComponentName NVARCHAR(200) NOT NULL,
+
+    Description NVARCHAR(500) NULL,
+
+    ResourceJson NVARCHAR(MAX) NOT NULL,
+
+    CreatedDate DATETIME NOT NULL
+        CONSTRAINT DF_Resources_CreatedDate DEFAULT GETUTCDATE(),
+
+    ModifiedDate DATETIME NOT NULL
+        CONSTRAINT DF_Resources_ModifiedDate DEFAULT GETUTCDATE(),
+
+    IsDeleted BIT NOT NULL
+        CONSTRAINT DF_Resources_IsDeleted DEFAULT (0)
+);
+GO
+

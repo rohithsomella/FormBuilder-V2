@@ -23,8 +23,8 @@
         <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" data-toggle="tooltip" data-placement="bottom" title="Menu">
             <i class="bi bi-list"></i>
         </button>
-        <h2>Add new Resource</h2>
-        <button class="info-btn" id="structureInfoBtn" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-html="true" title="Existing Resources">
+        <h2>Add New Resource</h2>
+        <button class="info-btn" id="structureInfoBtn" data-toggle="popover" data-trigger="hover" data-placement="bottom" data-html="true" title="Resource Types">
             <i class="bi bi-info-circle"></i>
         </button>
     </div>
@@ -36,7 +36,7 @@
     <div class="resource-lists-container">
         <div class="resource-list-card">
             <div class="resource-list-header">
-                <h3><i class="bi bi-database"></i> Add new Resource</h3>
+                <h3><i class="bi bi-database"></i> Add New Resource</h3>
                 <button class="btn btn-primary add-btn" data-type="resource" title="Add Resource">
                     <i class="bi bi-plus-lg"></i> Add
                 </button>
@@ -51,22 +51,7 @@
 
         <div class="resource-list-card">
             <div class="resource-list-header">
-                <h3><i class="bi bi-layers"></i> Add new Section</h3>
-                <button class="btn btn-primary add-btn" data-type="section" title="Add Section">
-                    <i class="bi bi-plus-lg"></i> Add
-                </button>
-            </div>
-            <div class="resource-list-body" id="sectionList">
-                <div class="empty-state">
-                    <i class="bi bi-inbox"></i>
-                    <p>No sections added yet</p>
-                </div>
-            </div>
-        </div>
-
-        <div class="resource-list-card">
-            <div class="resource-list-header">
-                <h3><i class="bi bi-puzzle"></i> Add new Component</h3>
+                <h3><i class="bi bi-puzzle"></i> Add New Component</h3>
                 <button class="btn btn-primary add-btn" data-type="component" title="Add Component">
                     <i class="bi bi-plus-lg"></i> Add
                 </button>
@@ -92,15 +77,12 @@
             </div>
             <div class="modal-body">
                 <form id="addResourceForm">
-                    <div class="form-group" id="groupNameField">
-                        <label id="groupNameLabel">Group Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="resGroupName1">
-                        <select class="form-control" id="resGroupDropdown" style="display:none"></select>
-                    </div>
-                    <div class="form-group" id="sectionNameField">
-                        <label id="sectionNameLabel">Section Name <span class="required">*</span></label>
-                        <input type="text" class="form-control" id="sectionName">
-                        <select class="form-control" id="sectionDropdown" style="display:none"></select>
+                    <div class="form-group" id="resourceTypeField">
+                        <label id="resourceTypeLabel">Resource Type <span class="required">*</span></label>
+                        <input type="text" class="form-control" id="resResourceTypeText" placeholder="Enter resource type" style="display:none;">
+                        <select class="form-control" id="resResourceTypeDropdown" style="display:none;">
+                            <option value="">-- Select Resource Type --</option>
+                        </select>
                     </div>
                     <div class="form-group">
                         <label>Component Name <span class="required">*</span></label>

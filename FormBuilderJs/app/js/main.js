@@ -1106,7 +1106,13 @@ try {
 try {
     const themeBtn = document.getElementById("themeToggle");
     const themeCss = document.getElementById("themeStylesheet");
-    document.getElementById("builder").style.backgroundColor = "white";
+    const builderElement = document.getElementById("builder");
+    
+    // Only set background color if builder element exists (not all pages have it)
+    if (builderElement) {
+        builderElement.style.backgroundColor = "white";
+    }
+    
     if (themeBtn && themeCss) {
         let darkMode = false;
 
