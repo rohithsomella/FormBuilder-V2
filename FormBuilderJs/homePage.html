@@ -20,7 +20,7 @@
     </div>
     
     <div class="menu-options">
-    <a href="app/html/index.html" class="menu-card create">
+    <a href="app/html/index.html" class="menu-card create" id="createFormCard">
         <div class="card-content">
             <span class="card-icon"><i class="bi bi-file-earmark-plus"></i></span>
             <div class="card-title">Create New Form</div>
@@ -62,7 +62,19 @@
 </div>
 </div>
 
-
+<script>
+    // Clear session storage when creating new form from home page
+    document.getElementById('createFormCard').addEventListener('click', function(e) {
+        console.log('🧹 Clearing session storage for new form...');
+        sessionStorage.removeItem('editingFormId');
+        sessionStorage.removeItem('editingFormData');
+        sessionStorage.removeItem('copyingFormData');
+        sessionStorage.removeItem('previewFormId');
+        sessionStorage.removeItem('previewFormSchema');
+        console.log('✓ Session storage cleared');
+        // Allow link to navigate normally
+    });
+</script>
 
 </body>
 </html>

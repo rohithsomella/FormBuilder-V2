@@ -1030,6 +1030,14 @@ function PreviewFormWithMode(mode) {
         // Store schema in sessionStorage and open new page
         console.log('📄 Opening form preview in new page');
         sessionStorage.setItem('previewFormSchema', JSON.stringify(formSchema));
+        
+        // Also store the form ID if the form has been saved
+        const editingFormId = sessionStorage.getItem('editingFormId');
+        if (editingFormId) {
+            console.log('Storing formId for preview:', editingFormId);
+            sessionStorage.setItem('previewFormId', editingFormId);
+        }
+        
         window.open('previewPage.html', '_blank');
         return;
     }
@@ -1506,6 +1514,8 @@ if (typeof $ !== 'undefined') {
                     FormBuilderApi.updateForm(updateData,
                         function(response) {
                             console.log('Form updated successfully:', response);
+                            // Store the editing form ID for preview and submission
+                            sessionStorage.setItem('editingFormId', editingFormData.formId);
                             $('#formDetailsModal').modal('hide');
                             alert('Form updated successfully!');
                             $(self).prop('disabled', false).text('Update');
@@ -1554,8 +1564,11 @@ if (typeof $ !== 'undefined') {
                             formTags: saveData.formTags,
                             formJson: saveData.formJson
                         }));
+                        // Also store the editing form ID for preview and submission
+                        sessionStorage.setItem('editingFormId', formId);
                         sessionStorage.setItem('hasSeenUpdateModal', 'true'); // Already seen modal on first save
                         console.log('✓ Form is now marked as existing form for quick updates');
+                        console.log('✓ editingFormId set:', formId);
                         
                         // Close modal
                         $('#formDetailsModal').modal('hide');

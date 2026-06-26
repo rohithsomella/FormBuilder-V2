@@ -107,11 +107,16 @@ function transformDynamicSelectionPanels(data, formInstance, depth) {
 function handleFormSubmission(submission, formInstance, formContainer) {
     console.log('📤 Handling form submission...');
     
-    // Get the form ID if we're editing an existing form
+    // Get the form ID - check both editing mode and preview mode
     var editingFormId = sessionStorage.getItem('editingFormId');
-    console.log('Editing form ID from session:', editingFormId);
+    var previewFormId = sessionStorage.getItem('previewFormId');
+    var formId = editingFormId || previewFormId;
     
-    if (!editingFormId) {
+    console.log('Editing form ID from session:', editingFormId);
+    console.log('Preview form ID from session:', previewFormId);
+    console.log('Using form ID:', formId);
+    
+    if (!formId) {
         console.warn('❌ No form ID found - form not saved yet. Please save the form first.');
         alert('Please save the form first before submitting.');
         return false;
@@ -136,7 +141,7 @@ function handleFormSubmission(submission, formInstance, formContainer) {
     // Send to backend
     console.log('🚀 Calling FormBuilderApi.submitFormData()');
     FormBuilderApi.submitFormData(
-        editingFormId,
+        formId,
         submissionData,
         function(response) {
             console.log('✅ Form submission saved successfully:', response);
