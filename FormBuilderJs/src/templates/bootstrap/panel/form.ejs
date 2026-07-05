@@ -6,7 +6,7 @@
     {% } %}
     role="button"
     aria-expanded="{{ctx.component.collapsible ? !ctx.collapsed : true}}"
-    aria-controls="{{ctx.instance.id}}-{{ctx.component.key}}"
+    aria-controls="{{ctx.elementId}}"
     ref="header"
   >
     <span class="mb-0 card-title {% if (ctx.component.theme && ctx.component.theme !== 'default') { %}text-light{% } %}">
@@ -23,7 +23,7 @@
   </div>
   {% } %}
   {% if (!ctx.collapsed || ctx.builder) { %}
-  <div class="card-body" ref="{{ctx.nestedKey}}" id="{{ctx.instance.id}}-{{ctx.component.key}}">
+  <div class="card-body" ref="{{ctx.nestedKey}}" id="{{ctx.elementId}}">
     {{ctx.children}}
   </div>
   {% } %}

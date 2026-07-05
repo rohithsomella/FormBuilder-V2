@@ -1668,6 +1668,9 @@ Formio.version = '---VERSION---';
 Formio.pathType = '';
 Formio.events = new EventEmitter();
 Formio.cdn = new CDN();
+Formio.appConfig = {
+  randomIdPrefixGeneration: true
+};
 if ((Formio.version || '').includes('rc')) {
   Formio.cdn.setBaseUrl('https://cdn.test-form.io');
 }

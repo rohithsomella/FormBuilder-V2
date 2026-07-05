@@ -959,6 +959,9 @@ export default class Component extends Element {
     data.transform = this.transform.bind(this);
     data.id = data.id || this.id;
     data.key = data.key || this.key;
+    data.elementId = (Formio.appConfig.randomIdPrefixGeneration !== false && data.id)
+      ? `${data.id}-${data.key}`
+      : data.key;
     data.value = data.value || this.dataValue;
     data.disabled = this.disabled;
     data.builder = this.builderMode;
