@@ -98,10 +98,10 @@ var FormBuilderApi = (function() {
     /**
      * Save a new form
      * @param {Object} formData - The form data object
-     * @param {String} formData.formName - Form name
-     * @param {String} formData.formTitle - Form title
-     * @param {String} formData.formTags - Form tags
-     * @param {String} formData.formJson - Form JSON configuration
+     * @param {String} formData.Name - Form name
+     * @param {String} formData.Title - Form title
+     * @param {Array} formData.Tags - Form tags
+     * @param {Object} formData.Components - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
@@ -116,10 +116,10 @@ var FormBuilderApi = (function() {
 
         // Prepare the request payload
         var payload = {
-            formName: formData.formName || '',
-            formTitle: formData.formTitle || '',
-            formTags: formData.formTags || '',
-            formJson: formData.formJson || ''
+            name: formData.name || '',
+            title: formData.title || '',
+            tags: formData.tags || [],
+            components: formData.components || {}
         };
 
         $.ajax({
@@ -150,34 +150,34 @@ var FormBuilderApi = (function() {
     /**
      * Update form configuration (uses UpdateForm endpoint)
      * @param {Object} formData - The form data object
-     * @param {String} formData.formId - Form ID (GUID)
-     * @param {String} formData.formName - Form name
-     * @param {String} formData.formTitle - Form title
-     * @param {String} formData.formTags - Form tags
-     * @param {String} formData.formJson - Form JSON configuration
+     * @param {String} formData.Id - Form ID (MongoDB ObjectId)
+     * @param {String} formData.Name - Form name
+     * @param {String} formData.Title - Form title
+     * @param {Array} formData.Tags - Form tags
+     * @param {Object} formData.Components - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
     function updateForm(formData, onSuccess, onError) {
-        if (!formData || !formData.formId) {
-            console.error('Form data with formId is required');
+        if (!formData || !formData.id) {
+            console.error('Form data with id is required');
             if (onError) {
-                onError('Form data with formId is required', 400);
+                onError('Form data with id is required', 400);
             }
             return;
         }
 
         // Prepare the request payload
         var payload = {
-            formId: formData.formId,
-            formName: formData.formName || '',
-            formTitle: formData.formTitle || '',
-            formTags: formData.formTags || '',
-            formJson: formData.formJson || ''
+            id: formData.id,
+            name: formData.name || '',
+            title: formData.title || '',
+            tags: formData.tags || [],
+            components: formData.components || {}
         };
 
         $.ajax({
-            url: config.baseUrl + '/' + formData.formId,
+            url: config.baseUrl + '/' + formData.id,
             type: 'PUT',
             contentType: config.contentType,
             dataType: 'json',
@@ -299,27 +299,31 @@ var FormBuilderApi = (function() {
      */
     function editForm(formId) {
         console.log('Edit form:', formId);
-        // Get the form details and redirect to builder
-        getFormById(formId, 
-            function(form) {
-                console.log('Form retrieved for editing:', form);
-                // Store form data in sessionStorage
-                sessionStorage.setItem('editingFormId', formId);
-                sessionStorage.setItem('editingFormData', JSON.stringify({
-                    formId: form.formId,
-                    formName: form.formName,
-                    formTitle: form.formTitle,
-                    formTags: form.formTags,
-                    formJson: form.formJson
-                }));
-                // Redirect to builder
-                window.location.href = 'index.html';
-            },
-            function(error) {
-                console.error('Failed to load form for editing:', error);
-                alert('Error loading form: ' + error);
-            }
-        );
+        
+        // Find the form from already loaded forms instead of fetching again
+        var form = paginationState.allForms.find(function(f) {
+            return f.id === formId;
+        });
+        
+        if (!form) {
+            console.error('Form not found in loaded forms:', formId);
+            alert('Form not found');
+            return;
+        }
+        
+        console.log('Form found for editing:', form);
+        // Store form data in sessionStorage
+        sessionStorage.setItem('editingFormId', formId);
+        sessionStorage.setItem('editingFormData', JSON.stringify({
+            id: form.id,
+            name: form.name,
+            title: form.title,
+            tags: form.tags,
+            components: form.components,
+            versionId: form.versionId
+        }));
+        // Redirect to builder
+        window.location.href = 'index.html';
     }
 
     /**
@@ -342,25 +346,28 @@ var FormBuilderApi = (function() {
      */
     function copyForm(formId) {
         console.log('Copy form:', formId);
-        // Get the form and load schema only (without form details)
-        getFormById(formId, 
-            function(form) {
-                console.log('Form retrieved for copying:', form);
-                // Store only the form schema (JSON) in sessionStorage for copy mode
-                // Do NOT store formId, formName, formTitle, formTags - this prevents form details from populating
-                sessionStorage.setItem('copyingFormData', JSON.stringify({
-                    formJson: form.formJson
-                }));
-                sessionStorage.removeItem('editingFormId');
-                sessionStorage.removeItem('editingFormData');
-                // Redirect to builder
-                window.location.href = 'index.html';
-            },
-            function(error) {
-                console.error('Failed to load form for copying:', error);
-                alert('Error loading form: ' + error);
-            }
-        );
+        
+        // Find the form from already loaded forms instead of fetching again
+        var form = paginationState.allForms.find(function(f) {
+            return f.id === formId;
+        });
+        
+        if (!form) {
+            console.error('Form not found in loaded forms:', formId);
+            alert('Form not found');
+            return;
+        }
+        
+        console.log('Form found for copying:', form);
+        // Store only the form schema (components) in sessionStorage for copy mode
+        // Do NOT store id, name, title, tags - this prevents form details from populating
+        sessionStorage.setItem('copyingFormData', JSON.stringify({
+            components: form.components
+        }));
+        sessionStorage.removeItem('editingFormId');
+        sessionStorage.removeItem('editingFormData');
+        // Redirect to builder
+        window.location.href = 'index.html';
     }
 
     /**
@@ -374,20 +381,43 @@ var FormBuilderApi = (function() {
             return;
         }
         
-        // Fetch the form from API
-        getFormById(formId, 
-            function(form) {
-                console.log('Form retrieved for preview:', form);
-                // Store form schema in sessionStorage
-                sessionStorage.setItem('previewFormSchema', form.formJson);
-                // Open preview page in new window
-                window.open('previewPage.html', '_blank');
-            },
-            function(error) {
-                console.error('Failed to load form for preview:', error);
-                alert('Error loading form: ' + error);
+        // Find the form from already loaded forms instead of fetching again
+        var form = paginationState.allForms.find(function(f) {
+            return f.id === formId;
+        });
+        
+        if (!form) {
+            console.error('Form not found in loaded forms:', formId);
+            alert('Form not found');
+            return;
+        }
+        
+        console.log('Form found for preview:', form);
+        
+        // Parse components if it's a string (from API)
+        let components = form.components;
+        if (typeof components === 'string') {
+            try {
+                components = JSON.parse(components);
+            } catch (e) {
+                console.error('Error parsing components:', e);
+                components = [];
             }
-        );
+        }
+        
+        // Create a proper Formio form schema
+        const formSchema = {
+            display: 'form',
+            type: 'form',
+            title: form.title || form.name || 'Untitled Form',
+            name: form.name || 'form',
+            components: components || []
+        };
+        
+        // Store form schema in sessionStorage
+        sessionStorage.setItem('previewFormSchema', JSON.stringify(formSchema));
+        // Open preview page in new window
+        window.open('previewPage.html', '_blank');
     }
 
     /**
@@ -479,27 +509,27 @@ var FormBuilderApi = (function() {
 
         // Filter by search term
         paginationState.filteredForms = paginationState.allForms.filter(function(form) {
-            var name = (form.formName || '').toLowerCase();
-            var tags = (form.formTags || '').toLowerCase();
-            return name.includes(searchTerm) || tags.includes(searchTerm);
+            var title = (form.title || '').toLowerCase();
+            var tags = (form.tags || []).join(' ').toLowerCase();
+            return title.includes(searchTerm) || tags.includes(searchTerm);
         });
 
         // Sort forms
         if (sortBy === 'name-asc') {
             paginationState.filteredForms.sort(function(a, b) {
-                return (a.formName || '').localeCompare(b.formName || '');
+                return (a.title || '').localeCompare(b.title || '');
             });
         } else if (sortBy === 'name-desc') {
             paginationState.filteredForms.sort(function(a, b) {
-                return (b.formName || '').localeCompare(a.formName || '');
+                return (b.title || '').localeCompare(a.title || '');
             });
         } else if (sortBy === 'date-desc') {
             paginationState.filteredForms.sort(function(a, b) {
-                return new Date(b.createdDate || 0) - new Date(a.createdDate || 0);
+                return new Date(b.modified || 0) - new Date(a.modified || 0);
             });
         } else if (sortBy === 'date-asc') {
             paginationState.filteredForms.sort(function(a, b) {
-                return new Date(a.createdDate || 0) - new Date(b.createdDate || 0);
+                return new Date(a.modified || 0) - new Date(b.modified || 0);
             });
         }
 
@@ -526,19 +556,20 @@ var FormBuilderApi = (function() {
 
         pageItems.forEach(function(form) {
             var row = document.createElement('tr');
-            row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
-                '<td style="text-align: right;">' + escapeHtml(form.formTags || '') + '</td>' +
+            var tagsDisplay = (form.tags || []).join(', ');
+            row.innerHTML = '<td><strong>' + escapeHtml(form.title || '') + '</strong></td>' +
+                '<td style="text-align: right;">' + escapeHtml(tagsDisplay) + '</td>' +
                 '<td style="text-align: right;">' +
-                '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.id + '\')">' +
                 '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.id + '\')">' +
                 '<i class="bi bi-copy"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-info" title="Preview form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-info" title="Preview form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.id + '\')">' +
                 '<i class="bi bi-box-arrow-up-right"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-danger" title="Delete form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.deleteForm(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-danger" title="Delete form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.deleteForm(\'' + form.id + '\')">' +
                 '<i class="bi bi-trash"></i>' +
                 '</button>' +
                 '</td>';
@@ -697,9 +728,9 @@ var FormBuilderApi = (function() {
 
         pageItems.forEach(function(form) {
             var row = document.createElement('tr');
-            row.innerHTML = '<td><strong>' + escapeHtml(form.formName || '') + '</strong></td>' +
+            row.innerHTML = '<td><strong>' + escapeHtml(form.title || '') + '</strong></td>' +
                 '<td style="text-align: right;">' +
-                '<button class="btn btn-sm btn-info" title="Generate Report" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.generateReport(\'' + form.formId + '\')">' +
+                '<button class="btn btn-sm btn-info" title="Generate Report" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.generateReport(\'' + form.id + '\')">' +
                 '<i class="bi bi-file-earmark-pdf"></i> Generate Report' +
                 '</button>' +
                 '</td>';

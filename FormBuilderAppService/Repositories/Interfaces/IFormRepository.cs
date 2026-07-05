@@ -1,13 +1,18 @@
 using FormBuilderAppService.Models;
+using FormBuilderAppService.Models.DTOs;
 
 namespace FormBuilderAppService.Repositories.Interfaces
 {
     public interface IFormRepository
     {
-        List<Form> GetForms();
-        Form? GetFormById(Guid formId);
-        Guid SaveForm(Form model);
-        void UpdateForm(Form model);
-        void DeleteForm(Guid formId);
+        Task<List<FormDto>> GetFormsAsync();
+
+        Task<FormDto?> GetFormByIdAsync(string id);
+
+        Task<string> SaveFormAsync(FormDto model);
+
+        Task UpdateFormAsync(FormDto model);
+
+        Task DeleteFormAsync(string id);
     }
 }

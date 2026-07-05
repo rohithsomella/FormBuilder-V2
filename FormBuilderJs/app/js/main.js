@@ -97,6 +97,10 @@ function loadFormJsonIntoBuilder(formJson) {
             console.log('📋 Extracted form metadata:', extractedFormMetadata);
             formJson = { components: firstForm.components || [] };
         }
+        else if (Array.isArray(formJson)) {
+            console.log('Detected array of components');
+            formJson = { components: formJson };
+        }
         else if (formJson.type) {
             console.log('Detected single component format');
             if (formJson.components && Array.isArray(formJson.components)) {
@@ -170,10 +174,10 @@ function populateFormDetails() {
             }
         }
         
-        // Populate form name input
+        // Populate form title input (now the primary field)
         
         $('.form-name-input').val(currentFormName);
-        $('#formNameInput').val(currentFormName);
+        $('#formTitleInput').val(currentFormName);
         
         // Merge tags: prioritize existing formTags, then add metadata tags
         let tagsToDisplay = [];
@@ -382,27 +386,25 @@ try {
     console.log('📋 Checking editing form data... Found:', !!editingFormDataStr);
     if (editingFormDataStr) {
         editingFormData = JSON.parse(editingFormDataStr);
-        console.log('✏️ Loading form for editing:', editingFormData.formName);
+        console.log('✏️ Loading form for editing:', editingFormData.title);
         
         // Store the form name and tags from editing data
-        currentFormName = editingFormData.formName || 'Untitled Form';
-        const tagsString = editingFormData.formTags || '';
-        formTags = tagsString.split(',').filter(tag => tag.trim());
+        currentFormName = editingFormData.title || 'Untitled Form';
+        formTags = (editingFormData.tags && Array.isArray(editingFormData.tags)) ? editingFormData.tags : [];
         console.log('Tags from editing data:', {
-            raw: tagsString,
             parsed: formTags,
             count: formTags.length
         });
         
-        // Parse the formJson
-        if (editingFormData.formJson) {
+        // Parse the components
+        if (editingFormData.components) {
             try {
-                initialFormSchema = typeof editingFormData.formJson === 'string' 
-                    ? JSON.parse(editingFormData.formJson) 
-                    : editingFormData.formJson;
-                console.log('✓ Form JSON parsed successfully. Components:', initialFormSchema.components?.length || 0);
+                initialFormSchema = typeof editingFormData.components === 'string' 
+                    ? JSON.parse(editingFormData.components) 
+                    : editingFormData.components;
+                console.log('✓ Form components parsed successfully. Components:', initialFormSchema.components?.length || (Array.isArray(initialFormSchema) ? initialFormSchema.length : 0));
             } catch (e) {
-                console.error('Error parsing form JSON:', e);
+                console.error('Error parsing form components:', e);
                 initialFormSchema = {};
             }
         }
@@ -415,15 +417,15 @@ try {
             console.log('📋 Loading form for copying (schema only)');
             isCopyingForm = true;
             
-            // Parse the formJson - but DON'T populate form details
-            if (copyingFormData.formJson) {
+            // Parse the components - but DON'T populate form details
+            if (copyingFormData.components) {
                 try {
-                    initialFormSchema = typeof copyingFormData.formJson === 'string' 
-                        ? JSON.parse(copyingFormData.formJson) 
-                        : copyingFormData.formJson;
-                    console.log('✓ Form JSON parsed successfully for copy. Components:', initialFormSchema.components?.length || 0);
+                    initialFormSchema = typeof copyingFormData.components === 'string' 
+                        ? JSON.parse(copyingFormData.components) 
+                        : copyingFormData.components;
+                    console.log('✓ Form components parsed successfully for copy. Components:', initialFormSchema.components?.length || (Array.isArray(initialFormSchema) ? initialFormSchema.length : 0));
                 } catch (e) {
-                    console.error('Error parsing form JSON for copy:', e);
+                    console.error('Error parsing form components for copy:', e);
                     initialFormSchema = {};
                 }
             }
@@ -708,6 +710,7 @@ function ClearBuilder() {
         formTags = [];
         $('#formNameInput').val('');
         $('#formTitleInput').val('');
+        $('#formVersionInput').val('');
         $('#tagContainer').empty();
         $('#tagInput').val('');
         console.log('✓ Form details cleared');
@@ -972,7 +975,7 @@ try {
     }
 
     // Prompt user for filename
-    const formName = $('#formNameInput').val().trim();
+    const formName = $('#formTitleInput').val().trim();
     const defaultName = (formName && formName !== 'Untitled Form' ? formName + '.json' : 'form-' + new Date().getTime() + '.json');
     const fileName = prompt('Enter filename for the JSON file:', defaultName);
 
@@ -1252,11 +1255,11 @@ try {
                 try {
                     var editingFormData = JSON.parse(editingFormDataStr);
                     var updateData = {
-                        formId: editingFormData.formId,
-                        formName: editingFormData.formName,
-                        formTitle: editingFormData.formTitle,
-                        formTags: editingFormData.formTags,
-                        formJson: JSON.stringify(formSchema)
+                        id: editingFormData.id,
+                        name: editingFormData.name,
+                        title: $('#formTitleInput').val() || currentFormName,
+                        tags: formTags,
+                        components: JSON.stringify(formSchema)
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1349,9 +1352,9 @@ if (typeof $ !== 'undefined') {
 
         $('.edit-form-btn').click(function () {
             console.log('✓✓ Edit button clicked!');
-            // Populate modal with current form name
-            $('#formNameInput').val(currentFormName);
-            // Generate camelCase automatically
+            // Populate modal with current form name/title
+            $('#formTitleInput').val(currentFormName);
+            // Generate camelCase automatically for form name
             let camelCase = currentFormName
                 .toLowerCase()
                 .replace(/(?:^\w|[A-Z]|\b\w)/g,
@@ -1359,7 +1362,7 @@ if (typeof $ !== 'undefined') {
                         ? word.toLowerCase()
                         : word.toUpperCase())
                 .replace(/\s+/g, '');
-            $('#formTitleInput').val(camelCase);
+            $('#formNameInput').val(camelCase);
             
             // Repopulate tags from current formTags array
             $('#tagContainer').empty();
@@ -1379,19 +1382,32 @@ if (typeof $ !== 'undefined') {
                 });
             }
             
-            // Check if in edit mode
+            // Populate version if editing
             var editingFormDataStr = sessionStorage.getItem('editingFormData');
             if (editingFormDataStr) {
-                // EDIT MODE - Disable form details fields and change button text
+                try {
+                    var editingFormData = JSON.parse(editingFormDataStr);
+                    if (editingFormData.versionId) {
+                        $('#formVersionInput').val(editingFormData.versionId);
+                        console.log('✓ Version populated:', editingFormData.versionId);
+                    }
+                } catch (e) {
+                    console.error('Error parsing version from editing data:', e);
+                }
+            }
+            
+            // Check if in edit mode
+            if (editingFormDataStr) {
+                // EDIT MODE - Disable form title/name but keep tags editable
                 $('#formNameInput').prop('disabled', true);
                 $('#formTitleInput').prop('disabled', true);
-                $('#tagInput').prop('disabled', true);
+                $('#tagInput').prop('disabled', false);
                 $('#saveFormDetails').text('Update').removeClass('btn-primary').addClass('btn-success');
-                console.log('✓ Edit mode: Form details disabled, button changed to Update');
+                console.log('✓ Edit mode: Form title/name disabled, tags editable, button changed to Update');
             } else {
                 // NEW FORM MODE - Enable form details fields and set button to Save
                 $('#formNameInput').prop('disabled', false);
-                $('#formTitleInput').prop('disabled', false);
+                $('#formNameInput').prop('disabled', false);
                 $('#tagInput').prop('disabled', false);
                 $('#saveFormDetails').text('Save').removeClass('btn-success').addClass('btn-primary');
                 console.log('✓ Create mode: Form details enabled, button set to Save');
@@ -1402,7 +1418,7 @@ if (typeof $ !== 'undefined') {
             console.log('✓ Modal opened');
         });
 
-        $('#formNameInput').on('input', function () {
+        $('#formTitleInput').on('input', function () {
 
             let value = $(this).val();
 
@@ -1414,7 +1430,7 @@ if (typeof $ !== 'undefined') {
                         : word.toUpperCase())
                 .replace(/\s+/g, '');
 
-            $('#formTitleInput').val(camelCase);
+            $('#formNameInput').val(camelCase);
         });
 
         $('#tagInput').keydown(function (e) {
@@ -1458,7 +1474,7 @@ if (typeof $ !== 'undefined') {
 
         // Save Form Details Button Handler
         $('#saveFormDetails').click(function () {
-            const newFormName = $('#formNameInput').val().trim();
+            const newFormName = $('#formTitleInput').val().trim();
             
             if (!newFormName) {
                 alert('Form name cannot be empty');
@@ -1501,14 +1517,14 @@ if (typeof $ !== 'undefined') {
                 // Update existing form
                 try {
                     var editingFormData = JSON.parse(editingFormDataStr);
-                    console.log('Updating existing form:', editingFormData.formId);
+                    console.log('Updating existing form:', editingFormData.id);
                     
                     var updateData = {
-                        formId: editingFormData.formId,
-                        formName: editingFormData.formName,
-                        formTitle: editingFormData.formTitle,
-                        formTags: editingFormData.formTags,
-                        formJson: JSON.stringify(formSchema)
+                        id: editingFormData.id,
+                        name: editingFormData.name,
+                        title: $('#formTitleInput').val() || currentFormName,
+                        tags: formTags,
+                        components: JSON.stringify(formSchema)
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1534,10 +1550,10 @@ if (typeof $ !== 'undefined') {
             } else {
                 // Save new form
                 var saveData = {
-                    formName: newFormName,
-                    formTitle: $('#formTitleInput').val() || newFormName,
-                    formTags: formTags.join(','),
-                    formJson: JSON.stringify(formSchema)
+                    name: newFormName.replace(/\s+/g, '-').toLowerCase(),
+                    title: newFormName,
+                    tags: formTags,
+                    components: JSON.stringify(formSchema)
                 };
                 
                 FormBuilderApi.saveForm(saveData,
@@ -1545,36 +1561,34 @@ if (typeof $ !== 'undefined') {
                         console.log('Form saved successfully:', response);
                         
                         // Store the new form as editing data for next updates
-                        // Use returned FormId, or generate one if not returned or is zeros
-                        let formId = response.formId;
+                        let formId = response.formId || response.id || response.Id;
+                        
                         if (!formId || formId === '00000000-0000-0000-0000-000000000000') {
                             // Generate a GUID on the frontend as fallback
                             formId = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
                                 var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
                                 return v.toString(16);
                             });
-                            console.log('Generated FormId on frontend:', formId);
                         }
                         
-                        console.log('Storing FormId for future updates:', formId);
-                        sessionStorage.setItem('editingFormData', JSON.stringify({
-                            formId: formId,
-                            formName: saveData.formName,
-                            formTitle: saveData.formTitle,
-                            formTags: saveData.formTags,
-                            formJson: saveData.formJson
-                        }));
+                        const editingData = {
+                            id: formId,
+                            name: saveData.name,
+                            title: saveData.title,
+                            tags: saveData.tags,
+                            components: saveData.components
+                        };
+                        
+                        sessionStorage.setItem('editingFormData', JSON.stringify(editingData));
                         // Also store the editing form ID for preview and submission
                         sessionStorage.setItem('editingFormId', formId);
                         sessionStorage.setItem('hasSeenUpdateModal', 'true'); // Already seen modal on first save
-                        console.log('✓ Form is now marked as existing form for quick updates');
-                        console.log('✓ editingFormId set:', formId);
                         
                         // Close modal
                         $('#formDetailsModal').modal('hide');
                         alert('Form saved successfully!');
                         // Clear form name input and reset
-                        $('#formNameInput').val('');
+                        $('#formTitleInput').val('');
                         formTags = [];
                         $('#tagContainer').empty();
                         // Re-enable the button

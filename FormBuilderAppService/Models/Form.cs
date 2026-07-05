@@ -1,15 +1,34 @@
-﻿namespace FormBuilderAppService.Models
+﻿using MongoDB.Bson;
+using MongoDB.Bson.Serialization.Attributes;
+
+namespace FormBuilderAppService.Models
 {
+    [BsonIgnoreExtraElements]
     public class Form
     {
-        public Guid FormId { get; set; }
+        [BsonId]
+        [BsonRepresentation(BsonType.String)]
+        public string? Id { get; set; }
 
-        public string? FormName { get; set; }
+        [BsonElement("title")]
+        public string Title { get; set; } = string.Empty;
 
-        public string? FormTitle { get; set; }
+        [BsonElement("name")]
+        public string Name { get; set; } = string.Empty;
 
-        public string? FormTags { get; set; }
+        [BsonElement("components")]
+        public BsonArray Components { get; set; } = new();
 
-        public string? FormJson { get; set; }
+        [BsonElement("_vid")]
+        public int VersionId { get; set; }
+
+        [BsonElement("created")]
+        public DateTime Created { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("modified")]
+        public DateTime Modified { get; set; } = DateTime.UtcNow;
+
+        [BsonElement("tags")]
+        public List<string> Tags { get; set; } = new();
     }
 }

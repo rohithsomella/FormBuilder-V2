@@ -95,6 +95,14 @@
         try {
             const formSchema = JSON.parse(previewFormSchema);
             console.log('📄 Loading form schema in preview page:', formSchema);
+            
+            // Ensure formSchema has required properties
+            if (!formSchema.components) {
+                formSchema.components = [];
+            }
+            if (!formSchema.display) {
+                formSchema.display = 'form';
+            }
 
             // Load form using Formio
             Formio.createForm(formContainer, formSchema)

@@ -89,7 +89,7 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
     </button>
 
     <button  class="btn btn-success" id="previewFormPage" title="Launch" data-toggle="tooltip" data-placement="bottom">
-        <i class="bi bi-arrow-up-right-square"></i>
+        <i class="bi bi-arrow-up-right-square"></i> 
     </button>
 
     <button class="btn btn-primary" id='saveBtn' title="Save" data-toggle="tooltip" data-placement="bottom">
@@ -131,33 +131,50 @@ accept=".json">
 
             <div class="modal-body">
 
-                <!-- Form Name -->
-                <div class="form-group">
-                    <label>Form Name</label>
-                    <input type="text"
-                           class="form-control"
-                           id="formNameInput">
-                </div>
-
                 <!-- Form Title -->
                 <div class="form-group">
                     <label>Form Title</label>
                     <input type="text"
                            class="form-control"
-                           id="formTitleInput"
+                           id="formTitleInput">
+                </div>
+
+                <!-- Form Name -->
+                <div class="form-group">
+                    <label>Form Name</label>
+                    <input type="text"
+                           class="form-control"
+                           id="formNameInput"
                            readonly>
                 </div>
 
-                <!-- Tags -->
-                <div class="form-group">
-                    <label>Form Tags</label>
+                <!-- Tags and Version Row -->
+                <div class="row">
+                    <!-- Tags Column (Left) -->
+                    <div class="col-md-8">
+                        <div class="form-group">
+                            <label>Form Tags</label>
 
-                    <div id="tagContainer" class="tag-container"></div>
+                            <div id="tagContainer" class="tag-container"></div>
 
-                    <input type="text"
-                           class="form-control mt-2"
-                           id="tagInput"
-                           placeholder="Type tag and press Space">
+                            <input type="text"
+                                   class="form-control mt-2"
+                                   id="tagInput"
+                                   placeholder="Type tag and press Space">
+                        </div>
+                    </div>
+
+                    <!-- Version Column (Right) -->
+                    <div class="col-md-4">
+                        <div class="form-group">
+                            <label>Version</label>
+                            <input type="text"
+                                   class="form-control"
+                                   id="formVersionInput"
+                                   readonly
+                                   placeholder="Auto">
+                        </div>
+                    </div>
                 </div>
 
             </div>

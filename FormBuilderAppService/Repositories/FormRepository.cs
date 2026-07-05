@@ -1,110 +1,243 @@
-using Dapper;
+using FormBuilderAppService.Data;
 using FormBuilderAppService.Models;
+using FormBuilderAppService.Models.DTOs;
 using FormBuilderAppService.Repositories.Interfaces;
-using Microsoft.Data.SqlClient;
-using System.Data;
+using MongoDB.Bson;
+using MongoDB.Bson.Serialization;
+using MongoDB.Driver;
+using System.Text.Json;
 
 namespace FormBuilderAppService.Repositories
 {
     public class FormRepository : IFormRepository
     {
-        private readonly IConfiguration _configuration;
+        private readonly IMongoCollection<Form> _forms;
+        private readonly ILogger<FormRepository> _logger;
 
-        public FormRepository(IConfiguration configuration)
+        public FormRepository(
+            MongoDbContext context,
+            ILogger<FormRepository> logger)
         {
-            _configuration = configuration;
+            _forms = context.Forms;
+            _logger = logger;
         }
 
-        private string GetConnectionString()
+        public async Task<List<FormDto>> GetFormsAsync()
         {
-            return _configuration.GetConnectionString("PracticeDB") ?? throw new InvalidOperationException("Connection string 'PracticeDB' not found");
-        }
-
-        public List<Form> GetForms()
-        {
-            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            try
             {
-                connection.Open();
-                var forms = connection.Query<Form>(
-                    "dbo.GetForms",
-                    commandType: CommandType.StoredProcedure
-                ).ToList();
-                return forms;
+                _logger.LogInformation("Fetching all forms from MongoDB.");
+
+                var forms = await _forms
+                    .Find(Builders<Form>.Filter.Empty)
+                    .ToListAsync();
+
+                _logger.LogInformation("Successfully fetched {Count} forms.", forms.Count);
+
+                return forms.Select(MapToDto).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving forms from MongoDB.");
+                throw;
             }
         }
 
-        public Form? GetFormById(Guid formId)
+        public async Task<FormDto?> GetFormByIdAsync(string id)
         {
-            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            try
             {
-                connection.Open();
-                var form = connection.QueryFirstOrDefault<Form>(
-                    "dbo.GetFormById",
-                    new { @FormId = formId },
-                    commandType: CommandType.StoredProcedure
-                );
-                return form;
-            }
-        }
+                _logger.LogInformation("Fetching form with Id: {Id}", id);
 
-        public Guid SaveForm(Form model)
-        {
-            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
-            {
-                connection.Open();
-                try
+                // Find form by Id property (which is stored as ObjectId in MongoDB)
+                var form = await _forms.Find(f => f.Id == id).FirstOrDefaultAsync();
+
+                if (form == null)
                 {
-                    var result = connection.QueryFirstOrDefault<Guid?>(
-                        "dbo.SaveForm",
-                        new
-                        {
-                            @FormName = model.FormName,
-                            @FormTitle = model.FormTitle,
-                            @FormTags = model.FormTags,
-                            @FormJson = model.FormJson
-                        },
-                        commandType: CommandType.StoredProcedure
-                    );
-                    return result ?? Guid.NewGuid();
+                    _logger.LogWarning("Form not found. Id: {Id}", id);
+                    return null;
                 }
-                catch (Exception ex)
-                {
-                    throw new Exception($"Error saving form: {ex.Message}", ex);
-                }
+
+                _logger.LogInformation("Form found. Id: {Id}", id);
+
+                return MapToDto(form);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving form. Id: {Id}", id);
+                throw;
             }
         }
 
-        public void UpdateForm(Form model)
+        public async Task<string> SaveFormAsync(FormDto model)
         {
-            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            try
             {
-                connection.Open();
-                connection.Execute(
-                    "dbo.UpdateForm",
-                    new
+                _logger.LogInformation("Saving form: {Title}", model.Title);
+
+                var form = MapToDocument(model);
+
+                // Generate MongoDB ObjectId if not provided
+                if (string.IsNullOrEmpty(form.Id))
+                {
+                    form.Id = ObjectId.GenerateNewId().ToString();
+                }
+
+                form.Created = DateTime.UtcNow;
+                form.Modified = DateTime.UtcNow;
+
+                await _forms.InsertOneAsync(form);
+
+                _logger.LogInformation("Form saved successfully. Id: {Id}", form.Id);
+
+                return form.Id!;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while saving form: {Title}", model.Title);
+                throw;
+            }
+        }
+
+        public async Task UpdateFormAsync(FormDto model)
+        {
+            try
+            {
+                _logger.LogInformation("Updating form. Id: {Id}", model.Id);
+
+                // Get the existing form to preserve VersionId if not provided
+                var existingForm = await _forms.Find(f => f.Id == model.Id).FirstOrDefaultAsync();
+                if (existingForm == null)
+                {
+                    _logger.LogWarning("No form found to update. Id: {Id}", model.Id);
+                    return;
+                }
+
+                var form = MapToDocument(model);
+
+                // Preserve the original VersionId if the incoming DTO has 0 (default)
+                if (model.VersionId == 0 && existingForm.VersionId > 0)
+                {
+                    form.VersionId = existingForm.VersionId;
+                }
+
+                form.Modified = DateTime.UtcNow;
+                // Preserve Created timestamp
+                form.Created = existingForm.Created;
+
+                var result = await _forms.ReplaceOneAsync(
+                    f => f.Id == form.Id,
+                    form);
+
+                if (result.MatchedCount == 0)
+                {
+                    _logger.LogWarning("No form found to update. Id: {Id}", model.Id);
+                }
+                else
+                {
+                    _logger.LogInformation("Form updated successfully. Id: {Id}", model.Id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while updating form. Id: {Id}", model.Id);
+                throw;
+            }
+        }
+
+        public async Task DeleteFormAsync(string id)
+        {
+            try
+            {
+                _logger.LogInformation("Deleting form. Id: {Id}", id);
+
+                var result = await _forms.DeleteOneAsync(f => f.Id == id);
+
+                if (result.DeletedCount == 0)
+                {
+                    _logger.LogWarning("No form found to delete. Id: {Id}", id);
+                }
+                else
+                {
+                    _logger.LogInformation("Form deleted successfully. Id: {Id}", id);
+                }
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting form. Id: {Id}", id);
+                throw;
+            }
+        }
+
+        private static Form MapToDocument(FormDto dto)
+        {
+            BsonArray componentsArray = new();
+            
+            try
+            {
+                if (!string.IsNullOrEmpty(dto.Components) && dto.Components != "[]")
+                {
+                    // Try to parse the JSON string as BsonValue first to handle different types
+                    var bsonValue = BsonSerializer.Deserialize<BsonValue>(dto.Components);
+                    
+                    if (bsonValue.IsBsonArray)
                     {
-                        @FormId = model.FormId,
-                        @FormName = model.FormName,
-                        @FormTitle = model.FormTitle,
-                        @FormTags = model.FormTags,
-                        @FormJson = model.FormJson
-                    },
-                    commandType: CommandType.StoredProcedure
-                );
+                        componentsArray = bsonValue.AsBsonArray;
+                    }
+                    else if (bsonValue.IsBsonDocument)
+                    {
+                        // If it's a document with a components property, extract the array
+                        var doc = bsonValue.AsBsonDocument;
+                        if (doc.Contains("components") && doc["components"].IsBsonArray)
+                        {
+                            componentsArray = doc["components"].AsBsonArray;
+                        }
+                        else
+                        {
+                            // If no components property, wrap the document as a single component
+                            componentsArray = new BsonArray { doc };
+                        }
+                    }
+                    else
+                    {
+                        // For other types, wrap in array
+                        componentsArray = new BsonArray { bsonValue };
+                    }
+                }
             }
+            catch (Exception ex)
+            {
+                // If deserialization fails, log it and use empty array
+                Console.WriteLine($"Error deserializing components: {ex.Message}");
+                componentsArray = new BsonArray();
+            }
+
+            return new Form
+            {
+                Id = dto.Id,
+                Title = dto.Title,
+                Name = dto.Name,
+                Components = componentsArray,
+                VersionId = dto.VersionId,
+                Created = dto.Created,
+                Modified = dto.Modified,
+                Tags = dto.Tags ?? new()
+            };
         }
 
-        public void DeleteForm(Guid formId)
+        private static FormDto MapToDto(Form form)
         {
-            using (SqlConnection connection = new SqlConnection(GetConnectionString()))
+            return new FormDto
             {
-                connection.Open();
-                connection.Execute(
-                    "dbo.DeleteForm",
-                    new { @FormId = formId },
-                    commandType: CommandType.StoredProcedure
-                );
-            }
+                Id = form.Id,
+                Title = form.Title,
+                Name = form.Name,
+                Components = form.Components.ToJson(),
+                VersionId = form.VersionId,
+                Created = form.Created,
+                Modified = form.Modified,
+                Tags = form.Tags
+            };
         }
     }
 }

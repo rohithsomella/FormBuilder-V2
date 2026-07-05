@@ -1,8 +1,12 @@
+using FormBuilderAppService.Data;
 using FormBuilderAppService.Repositories;
 using FormBuilderAppService.Repositories.Interfaces;
 using FormBuilderAppService.Services;
 using FormBuilderAppService.Services.Interfaces;
-using Microsoft.OpenApi.Models;
+using FormBuilderAppService.Settings;
+using Microsoft.Extensions.Options;
+using Microsoft.OpenApi;
+using MongoDB.Driver;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -31,6 +35,18 @@ builder.Services.AddCors(options =>
                .AllowAnyHeader();
     });
 });
+
+// MongoDB Configuration
+builder.Services.Configure<MongoDbSettings>(
+    builder.Configuration.GetSection("MongoDbSettings"));
+
+builder.Services.AddSingleton<IMongoClient>(sp =>
+{
+    var settings = sp.GetRequiredService<IOptions<MongoDbSettings>>().Value;
+    return new MongoClient(settings.ConnectionString);
+});
+
+builder.Services.AddSingleton<MongoDbContext>();
 
 // Register Repositories and Services
 builder.Services.AddScoped<IFormRepository, FormRepository>();

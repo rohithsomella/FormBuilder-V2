@@ -1,4 +1,4 @@
-using FormBuilderAppService.Models;
+using FormBuilderAppService.Models.DTOs;
 using FormBuilderAppService.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -9,96 +9,188 @@ namespace FormBuilderAppService.Controllers
     public class FormsController : ControllerBase
     {
         private readonly IFormService _formService;
+        private readonly ILogger<FormsController> _logger;
 
-        public FormsController(IFormService formService)
+        public FormsController(
+            IFormService formService,
+            ILogger<FormsController> logger)
         {
             _formService = formService;
+            _logger = logger;
         }
 
         /// <summary>
         /// Get all forms
         /// </summary>
         [HttpGet]
-        public ActionResult<List<Form>> GetForms()
+        public async Task<ActionResult<List<FormDto>>> GetForms()
         {
-            var forms = _formService.GetForms();
-            return Ok(forms);
+            try
+            {
+                _logger.LogInformation("Fetching all forms.");
+
+                var forms = await _formService.GetFormsAsync();
+
+                _logger.LogInformation("Successfully fetched {Count} forms.", forms.Count);
+
+                return Ok(forms);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching forms.");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An error occurred while retrieving forms." });
+            }
         }
 
         /// <summary>
-        /// Get form by ID
+        /// Get form by MongoDB Id
         /// </summary>
         [HttpGet("{id}")]
-        public ActionResult<Form> GetFormById(Guid id)
+        public async Task<ActionResult<FormDto>> GetFormById(string id)
         {
-            var form = _formService.GetFormById(id);
-            if (form == null)
+            try
             {
-                return NotFound(new { message = "Form not found" });
+                _logger.LogInformation("Fetching form with Id: {Id}", id);
+
+                var form = await _formService.GetFormByIdAsync(id);
+
+                if (form == null)
+                {
+                    _logger.LogWarning("Form not found. Id: {Id}", id);
+
+                    return NotFound(new { message = "Form not found." });
+                }
+
+                _logger.LogInformation("Form fetched successfully. Id: {Id}", id);
+
+                return Ok(form);
             }
-            return Ok(form);
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while fetching form. Id: {Id}", id);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An error occurred while retrieving the form." });
+            }
         }
 
         /// <summary>
         /// Save a new form
         /// </summary>
         [HttpPost]
-        public ActionResult SaveForm([FromBody] Form model)
+        public async Task<ActionResult> SaveForm([FromBody] FormDto model)
         {
-            if (model == null)
+            try
             {
-                return BadRequest(new { message = "Form data is required" });
-            }
+                if (model == null)
+                {
+                    _logger.LogWarning("Save form request received with null model.");
 
-            var formId = _formService.SaveForm(model);
-            return Ok(new { message = "Form saved successfully", formId = formId });
+                    return BadRequest(new { message = "Form data is required." });
+                }
+
+                _logger.LogInformation("Saving new form: {Title}", model.Title);
+
+                var id = await _formService.SaveFormAsync(model);
+
+                _logger.LogInformation("Form saved successfully. Id: {Id}", id);
+
+                return Ok(new
+                {
+                    message = "Form saved successfully.",
+                    id
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while saving form.");
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An error occurred while saving the form." });
+            }
         }
 
         /// <summary>
         /// Update an existing form
         /// </summary>
         [HttpPut("{id}")]
-        public ActionResult UpdateForm(Guid id, [FromBody] Form model)
+        public async Task<ActionResult> UpdateForm(string id, [FromBody] FormDto model)
         {
-            if (model == null)
+            try
             {
-                return BadRequest(new { message = "Form data is required" });
-            }
+                if (model == null)
+                {
+                    _logger.LogWarning("Update form request received with null model.");
 
-            if (id != model.FormId && model.FormId == Guid.Empty)
+                    return BadRequest(new { message = "Form data is required." });
+                }
+
+                model.Id = id;
+
+                var existingForm = await _formService.GetFormByIdAsync(id);
+
+                if (existingForm == null)
+                {
+                    _logger.LogWarning("Form not found for update. Id: {Id}", id);
+
+                    return NotFound(new { message = "Form not found." });
+                }
+
+                await _formService.UpdateFormAsync(model);
+
+                _logger.LogInformation("Form updated successfully. Id: {Id}", id);
+
+                return Ok(new
+                {
+                    message = "Form updated successfully.",
+                    id
+                });
+            }
+            catch (Exception ex)
             {
-                model.FormId = id;
-            }
+                _logger.LogError(ex, "Error occurred while updating form. Id: {Id}", id);
 
-            if (id != model.FormId)
-            {
-                return BadRequest(new { message = "Form ID mismatch" });
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An error occurred while updating the form." });
             }
-
-            var existingForm = _formService.GetFormById(id);
-            if (existingForm == null)
-            {
-                return NotFound(new { message = "Form not found" });
-            }
-
-            _formService.UpdateForm(model);
-            return Ok(new { message = "Form updated successfully", formId = id });
         }
 
         /// <summary>
-        /// Delete a form (soft delete - marks IsDeleted = 1)
+        /// Delete a form
         /// </summary>
         [HttpDelete("{id}")]
-        public ActionResult DeleteForm(Guid id)
+        public async Task<ActionResult> DeleteForm(string id)
         {
-            var existingForm = _formService.GetFormById(id);
-            if (existingForm == null)
+            try
             {
-                return NotFound(new { message = "Form not found" });
-            }
+                var existingForm = await _formService.GetFormByIdAsync(id);
 
-            _formService.DeleteForm(id);
-            return Ok(new { message = "Form deleted successfully", formId = id });
+                if (existingForm == null)
+                {
+                    _logger.LogWarning("Form not found for deletion. Id: {Id}", id);
+
+                    return NotFound(new { message = "Form not found." });
+                }
+
+                await _formService.DeleteFormAsync(id);
+
+                _logger.LogInformation("Form deleted successfully. Id: {Id}", id);
+
+                return Ok(new
+                {
+                    message = "Form deleted successfully.",
+                    id
+                });
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while deleting form. Id: {Id}", id);
+
+                return StatusCode(StatusCodes.Status500InternalServerError,
+                    new { message = "An error occurred while deleting the form." });
+            }
         }
     }
 }

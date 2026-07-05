@@ -1,4 +1,5 @@
 using FormBuilderAppService.Models;
+using FormBuilderAppService.Models.DTOs;
 using FormBuilderAppService.Repositories.Interfaces;
 using FormBuilderAppService.Services.Interfaces;
 
@@ -13,29 +14,29 @@ namespace FormBuilderAppService.Services
             _formRepository = formRepository;
         }
 
-        public List<Form> GetForms()
+        public async Task<List<FormDto>> GetFormsAsync()
         {
-            return _formRepository.GetForms();
+            return await _formRepository.GetFormsAsync();
         }
 
-        public Form? GetFormById(Guid formId)
+        public async Task<FormDto?> GetFormByIdAsync(string id)
         {
-            return _formRepository.GetFormById(formId);
+            return await _formRepository.GetFormByIdAsync(id);
         }
 
-        public Guid SaveForm(Form model)
+        public async Task<string> SaveFormAsync(FormDto model)
         {
-            return _formRepository.SaveForm(model);
+            return await _formRepository.SaveFormAsync(model);
         }
 
-        public void UpdateForm(Form model)
+        public async Task UpdateFormAsync(FormDto model)
         {
-            _formRepository.UpdateForm(model);
+            await _formRepository.UpdateFormAsync(model);
         }
 
-        public void DeleteForm(Guid formId)
+        public async Task DeleteFormAsync(string id)
         {
-            _formRepository.DeleteForm(formId);
+            await _formRepository.DeleteFormAsync(id);
         }
     }
 }
