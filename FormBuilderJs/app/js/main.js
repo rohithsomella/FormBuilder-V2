@@ -1241,7 +1241,17 @@ try {
                 return;
             }
 
-            console.log("Form saved:", formSchema);
+            // Validate and auto-fix duplicate API keys before saving
+            var errorDuplicates = validateAndAutoFixKeys(builderInstance);
+            if (errorDuplicates) {
+                showDuplicateKeyError(errorDuplicates, builderInstance);
+                return;
+            }
+
+            // Re-fetch schema in case auto-fix modified keys
+            const finalSchema = builderInstance.schema;
+            
+            console.log("Form saved:", finalSchema);
             
             // Check if we're editing an existing form
             var editingFormDataStr = sessionStorage.getItem('editingFormData');
@@ -1259,7 +1269,7 @@ try {
                         name: editingFormData.name,
                         title: $('#formTitleInput').val() || currentFormName,
                         tags: formTags,
-                        components: JSON.stringify(formSchema)
+                        components: JSON.stringify(finalSchema)
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1492,6 +1502,17 @@ if (typeof $ !== 'undefined') {
                 alert('No form created yet. Please add components first.');
                 return;
             }
+
+            // Validate and auto-fix duplicate API keys before saving
+            var errorDuplicates = validateAndAutoFixKeys(builderInstance);
+            if (errorDuplicates) {
+                showDuplicateKeyError(errorDuplicates, builderInstance);
+                $(this).prop('disabled', false).text('Save');
+                return;
+            }
+
+            // Re-fetch schema in case auto-fix modified keys
+            const finalSchema = builderInstance.schema;
             
             // Update the current form name
             currentFormName = newFormName;
@@ -1503,7 +1524,7 @@ if (typeof $ !== 'undefined') {
                 formName: newFormName,
                 formTitle: $('#formTitleInput').val(),
                 tags: formTags,
-                schema: formSchema
+                schema: finalSchema
             });
             
             // Disable the save button while saving
@@ -1524,7 +1545,7 @@ if (typeof $ !== 'undefined') {
                         name: editingFormData.name,
                         title: $('#formTitleInput').val() || currentFormName,
                         tags: formTags,
-                        components: JSON.stringify(formSchema)
+                        components: JSON.stringify(finalSchema)
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1553,7 +1574,7 @@ if (typeof $ !== 'undefined') {
                     name: newFormName.replace(/\s+/g, '-').toLowerCase(),
                     title: newFormName,
                     tags: formTags,
-                    components: JSON.stringify(formSchema)
+                    components: JSON.stringify(finalSchema)
                 };
                 
                 FormBuilderApi.saveForm(saveData,
