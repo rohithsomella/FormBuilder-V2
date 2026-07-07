@@ -17,6 +17,7 @@ import Form from './Form';
 import Utils from './utils';
 import Evaluator from './utils/Evaluator';
 import Licenses from './licenses';
+import appConfig from '../config/appsettings.json';
 
 Formio.loadModules = (path = `${Formio.getApiUrl()  }/externalModules.js`, name = 'externalModules') => {
   Formio.requireLibrary(name, name, path, true)
@@ -46,6 +47,9 @@ Formio.Licenses = Licenses;
 
 // This is strange, but is needed for "premium" components to import correctly.
 Formio.Formio = Formio;
+
+// Load app config from config/appsettings.json
+Formio.appConfig = { ...Formio.appConfig, ...appConfig };
 
 Formio.Components.setComponents(AllComponents);
 

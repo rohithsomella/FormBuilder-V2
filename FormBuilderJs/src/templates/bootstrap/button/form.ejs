@@ -4,7 +4,7 @@
   {{attr}}="{{ctx.input.attr[attr]}}"
   {% } %}
   {% if (ctx.component.description) { %}
-    aria-describedby="d-{{ctx.instance.id}}-{{ctx.component.key}}"
+    aria-describedby="d-{{ctx.elementId}}"
   {% } %}
 >
 {% if (ctx.component.leftIcon) { %}<span class="{{ctx.component.leftIcon}}"></span>&nbsp;{% } %}

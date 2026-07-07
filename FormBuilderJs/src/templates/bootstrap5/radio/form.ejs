@@ -3,9 +3,9 @@
   ref="radioGroup"
   role="{{ctx.component.type === 'selectboxes' ? 'group' : 'radiogroup'}}"
   aria-required="{{ctx.input.component.validate.required}}"
-  aria-labelledby="l-{{ctx.instance.id}}-{{ctx.component.key}}"
+  aria-labelledby="l-{{ctx.elementId}}"
   {% if (ctx.component.description) { %}
-    aria-describedby="d-{{ctx.instance.id}}-{{ctx.component.key}}"
+    aria-describedby="d-{{ctx.elementId}}"
   {% } %}
 >
   {% ctx.values.forEach(function(item) { %}
