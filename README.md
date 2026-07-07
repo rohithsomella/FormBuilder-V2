@@ -15,7 +15,7 @@ FORMBUILDER
 │   ├── appsettings.json
 │   └── ...
 │
-└── FormBuilderJs              ← Form.io Source Code (Frontend)
+└── FormBuilderJs              ← Form.io OpenSource (Frontend)
     ├── app
     ├── src
     ├── dist
