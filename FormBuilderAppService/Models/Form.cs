@@ -7,7 +7,7 @@ namespace FormBuilderAppService.Models
     public class Form
     {
         [BsonId]
-        [BsonRepresentation(BsonType.String)]
+        [BsonRepresentation(BsonType.ObjectId)]
         public string? Id { get; set; }
 
         [BsonElement("title")]
