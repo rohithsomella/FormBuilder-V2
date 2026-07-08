@@ -1,6 +1,23 @@
 //
 // Duplicate API Key Validation & Auto-Fix
 //
+var appSettings = null;
+
+(function loadAppSettings() {
+    try {
+        fetch('../../config/appsettings.json')
+            .then(function(res) { return res.json(); })
+            .then(function(data) { appSettings = data; })
+            .catch(function() { appSettings = {}; });
+    } catch (e) {
+        appSettings = {};
+    }
+})();
+
+function isSettingEnabled(setting) {
+    return appSettings && appSettings[setting] === true;
+}
+
 var AUTO_FIX_TYPES = ['columns', 'container', 'panel', 'htmlelement'];
 
 function findDuplicateKeys(components, path, collected) {
@@ -21,7 +38,6 @@ function findDuplicateKeys(components, path, collected) {
             collected[key].push({ path: currentPath, type: type });
         }
 
-        // Handle nested components (panel, fieldset, container, datagrid, editgrid, well, tree, etc.)
         if (comp.components && Array.isArray(comp.components)) {
             if (comp.type === 'tabs') {
                 comp.components.forEach(function(tab) {
@@ -34,7 +50,6 @@ function findDuplicateKeys(components, path, collected) {
             }
         }
 
-        // Handle columns
         if (comp.columns && Array.isArray(comp.columns)) {
             comp.columns.forEach(function(col, colIndex) {
                 if (col.components && Array.isArray(col.components)) {
@@ -43,7 +58,6 @@ function findDuplicateKeys(components, path, collected) {
             });
         }
 
-        // Handle table rows
         if (comp.rows && Array.isArray(comp.rows)) {
             comp.rows.forEach(function(row, rowIndex) {
                 if (Array.isArray(row)) {
@@ -61,6 +75,10 @@ function findDuplicateKeys(components, path, collected) {
 }
 
 function validateAndAutoFixKeys(builderInstance) {
+    if (!isSettingEnabled('autoGenerateIDsForLayouts') && !isSettingEnabled('listOutDuplicateIds')) {
+        return null;
+    }
+
     var formComponents = builderInstance.webform._form.components;
     if (!formComponents || !Array.isArray(formComponents)) return null;
 
@@ -72,40 +90,37 @@ function validateAndAutoFixKeys(builderInstance) {
     var fixedCount = 0;
 
     for (var key in collected) {
-        if (collected.hasOwnProperty(key) && collected[key].length > 1) {
-            var allAutoFixable = collected[key].every(function(item) {
-                return AUTO_FIX_TYPES.indexOf(item.type) !== -1;
-            });
+        if (!collected.hasOwnProperty(key) || collected[key].length <= 1) continue;
 
-            if (allAutoFixable) {
-                toFix[key] = collected[key];
-            } else {
-                toError[key] = collected[key];
-            }
+        var allLayout = collected[key].every(function(item) {
+            return AUTO_FIX_TYPES.indexOf(item.type) !== -1;
+        });
+
+        if (allLayout && isSettingEnabled('autoGenerateIDsForLayouts')) {
+            toFix[key] = collected[key];
+        } else if (isSettingEnabled('listOutDuplicateIds')) {
+            toError[key] = collected[key];
         }
     }
 
-    // Auto-fix by modifying the form definition (shared refs update builder components too)
     if (Object.keys(toFix).length > 0) {
         var counters = {};
         FormioUtils.eachComponent(formComponents, function(component) {
-            var compKey = component.key;
-            if (toFix.hasOwnProperty(compKey)) {
-                if (!counters[compKey]) counters[compKey] = 1;
-                component.key = compKey + counters[compKey];
-                counters[compKey]++;
+            if (toFix.hasOwnProperty(component.key)) {
+                if (!counters[component.key]) counters[component.key] = 1;
+                component.key = component.key + counters[component.key];
+                counters[component.key]++;
                 fixedCount++;
             }
         }, true);
 
         if (fixedCount > 0) {
-            alert('Auto-fixed ' + fixedCount + ' duplicate key(s) by appending suffix.\n' +
+            alert('Auto-fixed ' + fixedCount + ' layout component duplicate key(s).\n' +
                   'Components of type: ' + AUTO_FIX_TYPES.join(', ') + ' were updated.\n' +
                   'Please save again to confirm.');
         }
     }
 
-    // Return error info for non-fixable duplicates
     return Object.keys(toError).length > 0 ? toError : null;
 }
 
@@ -147,6 +162,13 @@ function showDuplicateKeyError(duplicates, builderInstance) {
     }
     bodyHtml += '</ul>';
 
+    var showModifyBtn = isSettingEnabled('autoGenerateIds');
+
+    var footerBtns = showModifyBtn
+        ? '<button type="button" class="btn btn-primary" id="modifyDupBtn">Modify Duplicate IDs</button>' +
+          '<button type="button" class="btn btn-secondary" data-dismiss="modal">OK</button>'
+        : '<button type="button" class="btn btn-secondary" data-dismiss="modal">OK</button>';
+
     var modalHtml =
         '<div class="modal fade" id="duplicateKeysModal" tabindex="-1" role="dialog">' +
           '<div class="modal-dialog modal-lg" role="document">' +
@@ -156,10 +178,7 @@ function showDuplicateKeyError(duplicates, builderInstance) {
                 '<button type="button" class="close" data-dismiss="modal">&times;</button>' +
               '</div>' +
               '<div class="modal-body">' + bodyHtml + '</div>' +
-              '<div class="modal-footer">' +
-                '<button type="button" class="btn btn-primary" id="modifyDupBtn">Modify Duplicate IDs</button>' +
-                '<button type="button" class="btn btn-secondary" data-dismiss="modal">OK</button>' +
-              '</div>' +
+              '<div class="modal-footer">' + footerBtns + '</div>' +
             '</div>' +
           '</div>' +
         '</div>';
@@ -167,8 +186,10 @@ function showDuplicateKeyError(duplicates, builderInstance) {
     $('body').append(modalHtml);
     $('#duplicateKeysModal').modal('show');
 
-    $('#modifyDupBtn').on('click', function() {
-        autoFixAllDuplicateKeys(builderInstance, duplicates);
-        $('#duplicateKeysModal').modal('hide');
-    });
+    if (showModifyBtn) {
+        $('#modifyDupBtn').on('click', function() {
+            autoFixAllDuplicateKeys(builderInstance, duplicates);
+            $('#duplicateKeysModal').modal('hide');
+        });
+    }
 }
