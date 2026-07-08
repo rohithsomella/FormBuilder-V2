@@ -1032,12 +1032,20 @@ function PreviewFormWithMode(mode) {
     if (mode === 'page') {
         // Store schema in sessionStorage and open new page
         console.log('📄 Opening form preview in new page');
+        
+        // Get the form ID if the form has been saved
+        const editingFormId = sessionStorage.getItem('editingFormId');
+        
+        // Ensure formSchema includes the _id
+        if (editingFormId && !formSchema._id) {
+            formSchema._id = editingFormId;
+            console.log('✅ Added editingFormId to schema._id:', editingFormId);
+        }
+        
         sessionStorage.setItem('previewFormSchema', JSON.stringify(formSchema));
         
-        // Also store the form ID if the form has been saved
-        const editingFormId = sessionStorage.getItem('editingFormId');
         if (editingFormId) {
-            console.log('Storing formId for preview:', editingFormId);
+            console.log('✅ Storing formId for preview:', editingFormId);
             sessionStorage.setItem('previewFormId', editingFormId);
         }
         

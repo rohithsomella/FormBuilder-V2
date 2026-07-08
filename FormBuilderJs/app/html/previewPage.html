@@ -83,18 +83,36 @@
 <script src="../../dist/formio.full.js"></script>
 <script src="../js/FormBuilderApi.js"></script>
 <script src="../js/formSubmissionHandler.js"></script>
+<script src="../js/FormBuilderApi.js"></script>
 
 <script>
     // Get form schema from sessionStorage
     const previewFormSchema = sessionStorage.getItem('previewFormSchema');
+    let previewFormId = sessionStorage.getItem('previewFormId');
     const formContainer = document.getElementById('previewFormContent');
+
+    console.log('=== previewPage.html loaded ===');
+    console.log('previewFormSchema available:', !!previewFormSchema);
+    console.log('previewFormId from sessionStorage:', previewFormId);
 
     if (!previewFormSchema) {
         formContainer.innerHTML = '<div class="error-message"><i class="bi bi-exclamation-circle"></i> <strong>Error:</strong> No form schema found. Please open the form preview from the builder.</div>';
     } else {
         try {
             const formSchema = JSON.parse(previewFormSchema);
-            console.log('📄 Loading form schema in preview page:', formSchema);
+            console.log('📄 Loading form schema in preview page');
+            
+            // Use the formId from sessionStorage (set by launchForm)
+            if (previewFormId) {
+                console.log('✅ Using previewFormId from sessionStorage:', previewFormId);
+            } else if (formSchema._id) {
+                // Fallback to schema._id
+                previewFormId = formSchema._id;
+                sessionStorage.setItem('previewFormId', previewFormId);
+                console.log('✅ Using schema._id as previewFormId:', previewFormId);
+            } else {
+                console.warn('⚠️ FormId not found in sessionStorage or schema._id');
+            }
             
             // Ensure formSchema has required properties
             if (!formSchema.components) {
@@ -108,8 +126,13 @@
             Formio.createForm(formContainer, formSchema)
                 .then(function(form) {
                     console.log('✓ Form preview loaded successfully in page');
-                    console.log('Form instance:', form);
                     console.log('FormBuilderApi available?', typeof FormBuilderApi !== 'undefined');
+                    console.log('📋 Final previewFormId:', previewFormId);
+
+                    // Store formId in sessionStorage for form submission handler
+                    if (previewFormId) {
+                        sessionStorage.setItem('previewFormId', previewFormId);
+                    }
 
                     // Handle form submission
                     form.on('submitForm', function(submission) {

@@ -1,6 +1,7 @@
 using FormBuilderAppService.Models;
 using FormBuilderAppService.Repositories.Interfaces;
 using FormBuilderAppService.Services.Interfaces;
+using System.Text.Json;
 
 namespace FormBuilderAppService.Services
 {
@@ -13,19 +14,19 @@ namespace FormBuilderAppService.Services
             _formSubmissionRepository = formSubmissionRepository;
         }
 
-        public Guid SaveFormSubmission(Guid formId, string submissionData)
+        public async Task<string> SaveFormSubmissionAsync(JsonElement submission)
         {
-            return _formSubmissionRepository.SaveFormSubmission(formId, submissionData);
+            return await _formSubmissionRepository.SaveFormSubmissionAsync(submission);
         }
 
-        public List<FormSubmission> GetFormSubmissions(Guid formId)
+        public async Task<List<FormSubmission>> GetFormSubmissionsAsync(string formId)
         {
-            return _formSubmissionRepository.GetFormSubmissions(formId);
+            return await _formSubmissionRepository.GetFormSubmissionsAsync(formId);
         }
 
-        public FormSubmission? GetFormSubmissionById(Guid submissionId)
+        public async Task<FormSubmission?> GetFormSubmissionByIdAsync(string submissionId)
         {
-            return _formSubmissionRepository.GetFormSubmissionById(submissionId);
+            return await _formSubmissionRepository.GetFormSubmissionByIdAsync(submissionId);
         }
     }
 }

@@ -383,16 +383,21 @@ var FormBuilderApi = (function() {
         
         // Find the form from already loaded forms instead of fetching again
         var form = paginationState.allForms.find(function(f) {
-            return f.id === formId;
+            // Try both 'id' and '_id' fields
+            return f.id === formId || f._id === formId;
         });
         
         if (!form) {
             console.error('Form not found in loaded forms:', formId);
+            console.log('Available forms:', paginationState.allForms);
             alert('Form not found');
             return;
         }
         
         console.log('Form found for preview:', form);
+        console.log('Form keys:', Object.keys(form));
+        console.log('Form._id:', form._id);
+        console.log('Form.id:', form.id);
         
         // Parse components if it's a string (from API)
         let components = form.components;
@@ -405,17 +410,31 @@ var FormBuilderApi = (function() {
             }
         }
         
-        // Create a proper Formio form schema
+        // Get the correct form ID - use _id if available, otherwise id
+        const actualFormId = form._id || form.id;
+        console.log('Actual form ID to use:', actualFormId);
+        
+        // Create a proper Formio form schema - INCLUDE THE _id!
         const formSchema = {
+            _id: actualFormId,  // ✅ Include the MongoDB ObjectId
             display: 'form',
             type: 'form',
             title: form.title || form.name || 'Untitled Form',
             name: form.name || 'form',
-            components: components || []
+            components: components || [],
+            _vid: form._vid || 0  // ✅ Include form version
         };
+        
+        console.log('📄 Creating form schema for preview with _id:', actualFormId);
+        console.log('📄 Creating form schema with _vid:', form._vid || 0);
         
         // Store form schema in sessionStorage
         sessionStorage.setItem('previewFormSchema', JSON.stringify(formSchema));
+        // Also store the form ID in sessionStorage for easy access
+        if (actualFormId) {
+            sessionStorage.setItem('previewFormId', actualFormId);
+            console.log('✅ Stored previewFormId in sessionStorage:', actualFormId);
+        }
         // Open preview page in new window
         window.open('previewPage.html', '_blank');
     }
@@ -788,44 +807,57 @@ var FormBuilderApi = (function() {
     }
 
     /**
-     * Submit form submission data to the backend
-     * @param {String} formId - The form ID
-     * @param {Object} submissionData - The form submission data object
+     * Submit a complete Form.io submission document to the backend.
+     * The entire submission object (including id, form, data, metadata, etc.) is sent as-is.
+     * @param {Object} submission - The complete Form.io submission object with form, data, and other properties
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
-    function submitFormData(formId, submissionData, onSuccess, onError) {
-        if (!formId || !submissionData) {
-            console.error('Form ID and submission data are required');
+    function submitFormData(submission, onSuccess, onError) {
+        // Validate submission is an object
+        if (!submission || typeof submission !== 'object') {
+            console.error('❌ Submission must be a valid object');
             if (onError) {
-                onError('Form ID and submission data are required', 400);
+                onError('Submission must be a valid object', 400);
+            }
+            return;
+        }
+
+        // Validate form property exists and is not empty
+        if (!submission.form || (typeof submission.form === 'string' && submission.form.trim() === '')) {
+            console.error('❌ Submission must contain a "form" property with Form ID');
+            if (onError) {
+                onError('Submission must contain a "form" property with the Form ID', 400);
+            }
+            return;
+        }
+
+        // Validate data property exists
+        if (!submission.data) {
+            console.error('❌ Submission must contain a "data" property');
+            if (onError) {
+                onError('Submission must contain form data', 400);
             }
             return;
         }
 
         var submissionUrl = config.baseUrl.replace('/api/forms', '/api/formsubmissions');
-        var payload = {
-            formId: formId,
-            submissionData: JSON.stringify(submissionData)
-        };
-
-        console.log('Submitting form data to:', submissionUrl);
-        console.log('Payload:', payload);
+        var payload = submission; // Send the entire submission as-is
 
         $.ajax({
             url: submissionUrl,
             type: 'POST',
-            contentType: config.contentType,
+            contentType: 'application/json',
             dataType: 'json',
             data: JSON.stringify(payload),
             success: function(response) {
-                console.log('Form submission saved successfully:', response);
+                console.log('✅ Submission saved:', response.submissionId);
                 if (onSuccess) {
                     onSuccess(response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error submitting form:', error);
+                console.error('❌ Error submitting form:', error);
                 var errorMessage = 'Error submitting form';
                 if (xhr.responseJSON && xhr.responseJSON.message) {
                     errorMessage = xhr.responseJSON.message;
