@@ -28,6 +28,30 @@ CREATE TABLE dbo.Forms
 GO
 
 /*=========================================================
+    TABLE : Tenants
+=========================================================*/
+
+-- Batch 1: Check if the table exists and drop it
+IF OBJECT_ID('dbo.Tenants', 'U') IS NOT NULL 
+BEGIN 
+    DROP TABLE dbo.Tenants; 
+END
+GO 
+
+-- Create the table
+CREATE TABLE dbo.Tenants (
+    TenantId UNIQUEIDENTIFIER NOT NULL CONSTRAINT PK_Tenants PRIMARY KEY DEFAULT NEWID(),
+    TenantName NVARCHAR(200) NOT NULL,
+    IsDeleted BIT NOT NULL CONSTRAINT DF_Tenants_IsDeleted DEFAULT (0),
+    Created DATETIME NOT NULL CONSTRAINT DF_Tenants_Created DEFAULT GETUTCDATE(),
+    Updated DATETIME NOT NULL CONSTRAINT DF_Tenants_Updated DEFAULT GETUTCDATE(),
+    CreatedBy NVARCHAR(200) NULL,
+    UpdatedBy NVARCHAR(200) NULL,
+    Deleted DATETIME NULL,
+    DeletedBy NVARCHAR(200) NULL
+);
+GO
+/*=========================================================
     TABLE : FormSubmissions
 =========================================================*/
 

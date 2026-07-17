@@ -1647,6 +1647,10 @@ document.addEventListener('DOMContentLoaded', function() {
     if (document.getElementById('formsTable')) {
         FormBuilderApi.loadFormsTable();
     }
+
+    if (document.getElementById('tenantsTable')) {
+        TenantHandler.loadTenantsTable();
+    }
     
     // Load reports table for reports.html page
     if (document.getElementById('reportsTable')) {

@@ -10,14 +10,187 @@ var FormBuilderApi = (function() {
     // Configuration
     var config = {
         baseUrl: 'http://localhost:5155/api/forms',
+        tenantBaseUrl: 'http://localhost:5155/api/tenant',
         contentType: 'application/json'
     };
 
-    /**
-     * Get all forms
-     * @param {Function} onSuccess - Callback function on success
-     * @param {Function} onError - Callback function on error
-     */
+
+    //  get tenants
+    function getTenants(onSuccess, onError) {
+        console.log('Fetching tenants from:', config.tenantBaseUrl);
+        $.ajax({
+            url: config.tenantBaseUrl,
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function (response) {
+                console.log('Tenants retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error retrieving tenants:', error);
+                console.error('Status Code:', xhr.status);
+                console.error('Response:', xhr.responseText);
+
+                var errorMessage = 'Error retrieving tenants';
+
+                if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server at ' + config.tenantBaseUrl + '. Make sure the backend is running.';
+                } else if (xhr.status === 404) {
+                    errorMessage = 'API endpoint not found. Check the URL: ' + config.tenantBaseUrl;
+                } else if (xhr.status === 500) {
+                    errorMessage = 'Server error: ' + (xhr.responseJSON ? xhr.responseJSON.message : 'Internal server error');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    // update tenant
+
+    function updateTenant(tenantData, onSuccess, onError) {
+
+        if (!tenantData || !tenantData.tenantId) {
+
+            console.error('Tenant data with tenantId is required');
+
+            if (onError) {
+                onError('Tenant data with tenantId is required', 400);
+            }
+
+            return;
+        }
+
+        var payload = {
+
+            tenantId: tenantData.tenantId,
+
+            tenantName: tenantData.tenantName || ''
+
+        };
+
+        $.ajax({
+
+            url: config.tenantBaseUrl + '/' + tenantData.tenantId,
+
+            type: 'PUT',
+
+            contentType: config.contentType,
+            dataType: 'json',
+
+            data: JSON.stringify(payload),
+
+            success: function (response) {
+
+                console.log('Tenant updated successfully:', response);
+
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+
+            error: function (xhr) {
+
+                console.error('Error updating tenant');
+
+                var errorMessage = xhr.responseJSON?.message || xhr.responseText || 'Error updating tenant';
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    // save tenant
+    function saveTenant(tenantData, onSuccess, onError) {
+
+        if (!tenantData) {
+            console.error('Tenant data is required');
+            if (onError) {
+                onError('Tenant data is required', 400);
+            }
+            return;
+        }
+
+        var payload = {
+            tenantName: tenantData.tenantName || ''
+        };
+
+        $.ajax({
+            url: config.tenantBaseUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+
+            success: function (response) {
+                console.log('Tenant saved successfully:', response);
+
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+
+            error: function (xhr) {
+
+                console.error('Error saving tenant');
+
+                var errorMessage = 'Error saving tenant';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+    // delete form
+    function deleteTenant(tenantId, onSuccess, onError) {
+        if (!tenantId) {
+            console.error('Tenant ID is required for deletion');
+            if (onError) onError('Tenant ID is required', 400);
+            return;
+        }
+
+        $.ajax({
+            url: config.tenantBaseUrl + '/' + tenantId,
+            type: 'DELETE',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function (response) {
+                console.log('Tenant deleted successfully from database:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error deleting tenant on server');
+                var errorMessage = 'Error deleting tenant';
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+
+    //  * Get all forms
+    //  * @param {Function} onSuccess - Callback function on success
+    //  * @param {Function} onError - Callback function on error
+    //  */
     function getAllForms(onSuccess, onError) {
         console.log('Fetching forms from:', config.baseUrl);
         $.ajax({
@@ -214,7 +387,7 @@ var FormBuilderApi = (function() {
             '"': '&quot;',
             "'": '&#039;'
         };
-        return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
+        return String(text).replace(/[&<>"']/g, function (m) { return map[m]; });
     }
 
     /**
@@ -1071,6 +1244,10 @@ var FormBuilderApi = (function() {
     // Public API
     return {
         getAllForms: getAllForms,
+        getTenants: getTenants,
+        saveTenant: saveTenant,
+        updateTenant: updateTenant,
+        deleteTenant: deleteTenant,
         getFormById: getFormById,
         saveForm: saveForm,
         updateForm: updateForm,

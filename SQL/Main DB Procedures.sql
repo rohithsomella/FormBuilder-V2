@@ -402,3 +402,68 @@ BEGIN
     ORDER BY ResourceType;
 END
 GO
+/*=========================================================
+    PROCEDURE : GetTenants
+=========================================================*/
+
+CREATE OR ALTER PROCEDURE dbo.GetTenants
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    SELECT
+        TenantId,
+        TenantName,
+        IsDeleted,
+        Created,
+        Updated,
+        CreatedBy,
+        UpdatedBy
+    FROM dbo.Tenants
+    WHERE IsDeleted = 0
+    ORDER BY TenantName;
+END
+GO
+/*=========================================================
+    PROCEDURE : DeleteTenants
+=========================================================*/
+CREATE OR ALTER PROCEDURE dbo.DeleteTenant
+(
+    @TenantId UNIQUEIDENTIFIER,
+    @DeletedBy NVARCHAR(200) = NULL
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Tenants
+    SET
+        IsDeleted = 1,
+        DeletedBy = @DeletedBy,
+        Deleted = GETUTCDATE(),
+        Updated = GETUTCDATE()
+    WHERE TenantId = @TenantId
+      AND IsDeleted = 0;
+END
+GO
+/*=========================================================
+    PROCEDURE : UpdateTenants
+=========================================================*/
+CREATE OR ALTER PROCEDURE dbo.UpdateTenant
+(
+    @TenantId UNIQUEIDENTIFIER,
+    @TenantName NVARCHAR(250)
+)
+AS
+BEGIN
+    SET NOCOUNT ON;
+
+    UPDATE dbo.Tenants
+    SET 
+        TenantName = @TenantName,
+        Updated = GETUTCDATE()
+    WHERE TenantId = @TenantId 
+      AND IsDeleted = 0; -- Only update if it hasn't been soft-deleted
+END
+GO
+/*=========================================================

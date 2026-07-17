@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <meta charset="utf-8">
+    <title>Open Existing Tenants</title>
+    <link id="themeStylesheet" rel="stylesheet"
+        href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../styles.css">
+    <link rel="stylesheet" href="../css/existingForms.css">
+    <link rel="stylesheet" href="../css/builder.css">
+</head>
+
+<body>
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <div class="builder-navbar">
+        <div class="header-left">
+            <button class="menu-btn" id="menuBtn" onclick="toggleMenu()" data-toggle="tooltip" data-placement="bottom"
+                title="Menu">
+                <i class="bi bi-list"></i>
+            </button>
+            <h2>Existing Tenants</h2>
+        </div>
+    </div>
+
+    <div id="tenantsList" class="forms-list-container">
+        <div class="forms-wrapper">
+            <div id="tenantsLoadingMessage" class="alert alert-info">
+                <i class="bi bi-info-circle"></i> <strong>Loading tenants...</strong>
+            </div>
+
+            <div class="table-controls" id="tenantsTableControls" style="display: none;">
+                <div class="controls-left">
+                    <input type="text" id="tenantsSearchInput" class="search-box" placeholder="Search tenants..." />
+                    <select id="tenantsFilterSelect" class="filter-dropdown">
+                        <option value="">Sort by:</option>
+                        <option value="name-asc">A - Z</option>
+                        <option value="name-desc">Z - A</option>
+                        <option value="date-desc">New - Old</option>
+                        <option value="date-asc">Old - New</option>
+                    </select>
+                </div>
+            </div>
+
+            <table id="tenantsTable" class="table table-striped table-hover" style="display: none;">
+                <thead class="table-dark">
+                    <tr>
+                        <th style="width: 75%;">Tenant Name</th>
+                        <th style="width: 25%; text-align: right;">Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="tenantsTableBody"></tbody>
+            </table>
+
+            <div class="pagination-controls" id="tenantsPaginationControls" style="display: none;">
+                <div class="pagination-buttons">
+                    <button class="pagination-btn" id="tenantsPrevPageBtn"
+                        onclick="FormBuilderApi.previousTenantPage()">&lt; Previous</button>
+                    <div class="page-numbers" id="tenantsPageNumbers"></div>
+                    <button class="pagination-btn" id="tenantsNextPageBtn" onclick="FormBuilderApi.nextTenantPage()"
+                        style="display: none;">More &gt;</button>
+                </div>
+                <div class="pagination-info">
+                    <span id="tenantsPaginationInfo">Page 1</span>
+                </div>
+            </div>
+        </div>
+        <!-- Edit Tenant Modal -->
+        <div class="modal fade" id="editTenantModal" tabindex="-1">
+            <div class="modal-dialog">
+                <div class="modal-content">
+
+                    <div class="modal-header">
+                        <h5 class="modal-title">Edit Tenant</h5>
+                        <button type="button" class="close" data-dismiss="modal">
+                            <span>&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+
+                        <input type="hidden" id="editTenantId">
+
+                        <div class="form-group">
+                            <label>Tenant Name</label>
+                            <input type="text" id="editTenantName" class="form-control" placeholder="Enter Tenant Name">
+                        </div>
+
+                    </div>
+
+                    <div class="modal-footer">
+                        <button class="btn btn-secondary" data-dismiss="modal">
+                            Cancel
+                        </button>
+                        <button class="btn btn-primary" onclick="TenantHandler.saveTenant()">
+                            Update
+                        </button>
+                    </div>
+                    <div id="tenantMessage" class="alert" style="display:none;margin-top:10px;"></div>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="../../dist/formio.full.js"></script>
+    <script src="../js/CommonItems.js"></script>
+    <script src="../js/IdGenerators.js"></script>
+    <script src="../js/main.js"></script>
+    <script src="../js/FormBuilderApi.js"></script>
+    <script src="../js/tenantHandler.js"></script>
+
+</body>
+
+</html>
