@@ -137,9 +137,26 @@ var TenantHandler = (function () {
             tenantPaginationState.filteredTenants.sort(function (a, b) {
                 return (a.name || '').localeCompare(b.name || '');
             });
-        } else if (sortBy === 'name-desc') {
+        }
+        else if (sortBy === 'name-desc') {
             tenantPaginationState.filteredTenants.sort(function (a, b) {
                 return (b.name || '').localeCompare(a.name || '');
+            });
+        }
+        else if (sortBy === 'date-desc') {
+            tenantPaginationState.filteredTenants.sort(function (a, b) {
+                var dateA = new Date(a.updated || a.created || 0);
+                var dateB = new Date(b.updated || b.created || 0);
+
+                return dateB - dateA;
+            });
+        }
+        else if (sortBy === 'date-asc') {
+            tenantPaginationState.filteredTenants.sort(function (a, b) {
+                var dateA = new Date(a.updated || a.created || 0);
+                var dateB = new Date(b.updated || b.created || 0);
+
+                return dateA - dateB;
             });
         }
 
@@ -147,58 +164,6 @@ var TenantHandler = (function () {
         renderTenantPaginationControls();
     }
 
-    //     function displayPaginatedTenants() {
-    //         var tableBody = document.getElementById('tenantsTableBody');
-    //         var tenantsTable = document.getElementById('tenantsTable');
-
-    //         if (!tableBody || !tenantsTable) {
-    //             return;
-    //         }
-
-    //         tableBody.innerHTML = '';
-
-    //         var startIndex = (tenantPaginationState.currentPage - 1) * tenantPaginationState.itemsPerPage;
-    //         var endIndex = startIndex + tenantPaginationState.itemsPerPage;
-    //         var pageItems = tenantPaginationState.filteredTenants.slice(startIndex, endIndex);
-
-    //         pageItems.forEach(function(tenant) {
-    //             var displayDate = tenant.updated || tenant.created;
-    // if (tenant.updated &&new Date(tenant.updated).getTime() !== new Date(tenant.created).getTime()) {
-    //     displayDate = tenant.updated;
-    // }
-
-    //             var formattedDate = displayDate? new Date(displayDate).toLocaleString(): '';
-    //             var row = document.createElement('tr');
-    //             row.innerHTML = '<td>' +
-    //     '<strong>' + escapeHtml(tenant.name || '') + '</strong>' +
-    //     '<br>' +
-    //     '<small style="color:#6c757d;">' +
-    //         (tenant.updated &&
-    //         new Date(tenant.updated).getTime() !== new Date(tenant.created).getTime()
-    //             ? 'Updated: '
-    //             : 'Created: ') +
-    //         formattedDate +
-    //     '</small>' +
-    // '</td>'  +
-    //                 '<td>' + formattedDate + '</td>' +
-    //                 '<td style="text-align: right;">' +
-    //                 '<div style="display: inline-flex; justify-content: center; align-items: center; gap: 6px; margin-left: auto;">' +
-    //                 '<button class="btn btn-sm btn-primary" title="Edit tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.editTenant(\'' + tenant.id + '\')">' +
-    //                 'Edit <i class="bi bi-pencil"></i>' +
-    //                 '</button> ' +
-    //                 '<button class="btn btn-sm btn-secondary" title="Open tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.openTenant(\'' + tenant.id + '\')">' +
-    //                 'Open <i class="bi bi-eye"></i>' +
-    //                 '</button> ' +
-    //                 '<button class="btn btn-sm btn-danger" title="Delete tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.deleteTenant(\'' + tenant.id + '\')">' +
-    //                 'Delete <i class="bi bi-trash"></i>' +
-    //                 '</button>' +
-    //                 '</div>' +
-    //                 '</td>';
-    //             tableBody.appendChild(row);
-    //         });
-
-    //         tenantsTable.style.display = 'table';
-    //     }
     function displayPaginatedTenants() {
         var tableBody = document.getElementById('tenantsTableBody');
         var tenantsTable = document.getElementById('tenantsTable');
@@ -239,13 +204,12 @@ var TenantHandler = (function () {
 
                 '<td style="text-align:right;">' +
                 '<div style="display:inline-flex;justify-content:center;align-items:center;gap:6px;margin-left:auto;">' +
-
+                '<button class="btn btn-sm btn-success" title="Open tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.openTenant(\'' + tenant.id + '\')">' +
+                'Open <i class="bi bi-eye"></i>' +
+                
+                '</button> ' +
                 '<button class="btn btn-sm btn-primary" title="Edit tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.editTenant(\'' + tenant.id + '\')">' +
                 'Edit <i class="bi bi-pencil"></i>' +
-                '</button> ' +
-
-                '<button class="btn btn-sm btn-secondary" title="Open tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.openTenant(\'' + tenant.id + '\')">' +
-                'Open <i class="bi bi-eye"></i>' +
                 '</button> ' +
 
                 '<button class="btn btn-sm btn-danger" title="Delete tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.deleteTenant(\'' + tenant.id + '\')">' +

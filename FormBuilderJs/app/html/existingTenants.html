@@ -57,11 +57,16 @@
 
             <div class="pagination-controls" id="tenantsPaginationControls" style="display: none;">
                 <div class="pagination-buttons">
-                    <button class="pagination-btn" id="tenantsPrevPageBtn"
-                        onclick="FormBuilderApi.previousTenantPage()">&lt; Previous</button>
+                    <button class="pagination-btn" id="tenantsPrevPageBtn" onclick="TenantHandler.previousTenantPage()">
+                        &lt; Previous
+                    </button>
+
                     <div class="page-numbers" id="tenantsPageNumbers"></div>
-                    <button class="pagination-btn" id="tenantsNextPageBtn" onclick="FormBuilderApi.nextTenantPage()"
-                        style="display: none;">More &gt;</button>
+
+                    <button class="pagination-btn" id="tenantsNextPageBtn" onclick="TenantHandler.nextTenantPage()"
+                        style="display: none;">
+                        More &gt;
+                    </button>
                 </div>
                 <div class="pagination-info">
                     <span id="tenantsPaginationInfo">Page 1</span>

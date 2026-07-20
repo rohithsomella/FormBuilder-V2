@@ -117,6 +117,10 @@ body {
     color: #ff4fd2;
     border: 2px solid #ffd0ef;
 }
+.tenants .card-icon {
+    color: #198754;
+    border: 2px solid #ccefd8;
+}
 
 .resources .card-icon {
     color: #1ea7ff;
@@ -172,7 +176,9 @@ body {
 .open::after {
     background: #ffc3e8;
 }
-
+.tenants::after {
+    background: #ccefd8;
+}
 .resources::after {
     background: #bde8ff;
 }
