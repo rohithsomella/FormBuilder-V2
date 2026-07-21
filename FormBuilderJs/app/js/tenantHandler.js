@@ -205,15 +205,15 @@ var TenantHandler = (function () {
                 '<td style="text-align:right;">' +
                 '<div style="display:inline-flex;justify-content:center;align-items:center;gap:6px;margin-left:auto;">' +
                 '<button class="btn btn-sm btn-success" title="Open tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.openTenant(\'' + tenant.id + '\')">' +
-                'Open <i class="bi bi-eye"></i>' +
+                ' <i class="bi bi-eye"></i> Open' +
                 
                 '</button> ' +
                 '<button class="btn btn-sm btn-primary" title="Edit tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.editTenant(\'' + tenant.id + '\')">' +
-                'Edit <i class="bi bi-pencil"></i>' +
+                ' <i class="bi bi-pencil"></i> Edit' +
                 '</button> ' +
 
                 '<button class="btn btn-sm btn-danger" title="Delete tenant" data-toggle="tooltip" data-placement="bottom" onclick="TenantHandler.deleteTenant(\'' + tenant.id + '\')">' +
-                'Delete <i class="bi bi-trash"></i>' +
+                ' <i class="bi bi-trash"></i>' +
                 '</button>' +
 
                 '</div>' +
