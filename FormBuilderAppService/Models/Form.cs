@@ -30,5 +30,10 @@ namespace FormBuilderAppService.Models
 
         [BsonElement("tags")]
         public List<string> Tags { get; set; } = new();
+
+        [BsonElement("project")]
+        [BsonRepresentation(BsonType.String)]
+        public Guid TenantId { get; set; } = Guid.Empty;
+
     }
 }

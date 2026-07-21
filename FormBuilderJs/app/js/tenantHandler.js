@@ -358,10 +358,11 @@ var TenantHandler = (function () {
         );
     }
 
+    // Open Tenant
 
-    function openTenant(tenantId) {
-        alert('Open tenant action for ' + tenantId);
-    }
+function openTenant(tenantId) {
+    window.location.href = 'existingForms.html?tenantId=' + encodeURIComponent(tenantId);
+}
 
     // Delete Tenants
     function deleteTenant(tenantId) {

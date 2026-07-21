@@ -221,7 +221,8 @@ namespace FormBuilderAppService.Repositories
                 VersionId = dto.VersionId,
                 Created = dto.Created,
                 Modified = dto.Modified,
-                Tags = dto.Tags ?? new()
+                Tags = dto.Tags ?? new(),
+                TenantId = dto.TenantId
             };
         }
 
@@ -236,8 +237,31 @@ namespace FormBuilderAppService.Repositories
                 VersionId = form.VersionId,
                 Created = form.Created,
                 Modified = form.Modified,
-                Tags = form.Tags
+                Tags = form.Tags,
+                TenantId = form.TenantId
             };
+        }
+
+        public List<FormDto> GetFormsByTenantId(Guid tenantId)
+        {
+            try
+            {
+                _logger.LogInformation("Fetching forms for TenantId: {TenantId}", tenantId);
+
+                // Convert Guid to uppercase string to match MongoDB data format
+                var tenantIdString = tenantId.ToString().ToUpper();
+                var filter = Builders<Form>.Filter.Eq("project", tenantIdString);
+                var forms = _forms.Find(filter).ToList();
+
+                _logger.LogInformation("Successfully fetched {Count} forms for TenantId: {TenantId}", forms.Count, tenantId);
+
+                return forms.Select(MapToDto).ToList();
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while retrieving forms for TenantId: {TenantId}", tenantId);
+                throw;
+            }
         }
     }
 }

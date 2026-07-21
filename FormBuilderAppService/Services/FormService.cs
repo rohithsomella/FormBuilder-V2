@@ -38,5 +38,10 @@ namespace FormBuilderAppService.Services
         {
             await _formRepository.DeleteFormAsync(id);
         }
+
+        public List<FormDto> GetFormsByTenantId(Guid tenantId)
+        {
+            return _formRepository.GetFormsByTenantId(tenantId);
+        }
     }
 }

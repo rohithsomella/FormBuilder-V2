@@ -17,5 +17,7 @@
         public DateTime Modified { get; set; } = DateTime.UtcNow;
 
         public List<string> Tags { get; set; } = new();
+
+        public Guid TenantId { get; set; } = Guid.Empty;
     }
 }

@@ -1,4 +1,5 @@
 using FormBuilderAppService.Models.DTOs;
+using FormBuilderAppService.Services;
 using FormBuilderAppService.Services.Interfaces;
 using Microsoft.AspNetCore.Mvc;
 
@@ -192,5 +193,32 @@ namespace FormBuilderAppService.Controllers
                     new { message = "An error occurred while deleting the form." });
             }
         }
+
+        /// <summary>
+        /// Get all forms by Tenant Id
+        /// </summary>
+        [HttpGet("{id}/tenantForms")]
+
+        public ActionResult<List<FormDto>> GetFormsByTenantId(Guid id)
+        {
+            try
+            {
+                var forms = _formService.GetFormsByTenantId(id);
+                return Ok(forms);
+            }
+            
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, ex.Message);
+
+                return StatusCode(500, new
+                {
+                    message = ex.Message,
+                    inner = ex.InnerException?.Message
+                });
+            }
+        }
+
+
     }
 }

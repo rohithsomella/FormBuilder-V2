@@ -14,5 +14,7 @@ namespace FormBuilderAppService.Services.Interfaces
         Task UpdateFormAsync(FormDto model);
 
         Task DeleteFormAsync(string id);
+
+        List<FormDto> GetFormsByTenantId(Guid tenantId);
     }
 }

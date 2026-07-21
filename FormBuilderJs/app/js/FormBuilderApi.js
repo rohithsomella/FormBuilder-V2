@@ -108,6 +108,30 @@ var FormBuilderApi = (function() {
         });
     }
 
+    // Open tenant
+
+   function getFormsByTenantId(tenantId, onSuccess, onError) {
+
+    $.ajax({
+        url: config.baseUrl + "/" + tenantId + "/tenantForms",
+        type: "GET",
+        contentType: config.contentType,
+        dataType: "json",
+
+        success: function (response) {
+            if (onSuccess) {
+                onSuccess(response);
+            }
+        },
+
+        error: function (xhr) {
+
+            if (onError) {
+                onError(xhr.responseText);
+            }
+        }
+    });
+}
     // save tenant
     function saveTenant(tenantData, onSuccess, onError) {
 
@@ -390,10 +414,31 @@ var FormBuilderApi = (function() {
         return String(text).replace(/[&<>"']/g, function (m) { return map[m]; });
     }
 
-    /**
-     * Load and display all forms in a table (for existingForms.html)
-     */
+
+    //  * Load and display forms in a table (for existingForms.html)
+    //  * Detects if a tenantId parameter is present in the URL query string.
+    //  */
     function loadFormsTable() {
+     
+        var urlParams = new URLSearchParams(window.location.search);
+        var tenantId = urlParams.get('tenantId');
+
+        if (tenantId) {
+            console.log("Tenant ID detected in URL:", tenantId);
+            
+            getFormsByTenantId(tenantId, 
+                function(tenantForms) {
+                    populateFormsTable(tenantForms);
+                },
+                function(error) {
+                    console.error('Failed to load forms for tenant:', error);
+                    showNoFormsMessage(error || 'Failed to fetch forms for this tenant.');
+                }
+            );
+            return;
+        }
+
+        console.log("No tenant ID in URL. Fetching all forms...");
         getAllForms(
             function(forms) {
                 populateFormsTable(forms);
@@ -404,7 +449,6 @@ var FormBuilderApi = (function() {
             }
         );
     }
-
     /**
      * Populate the forms table with data
      * @param {Array} forms - Array of form objects
@@ -1247,6 +1291,7 @@ var FormBuilderApi = (function() {
         getTenants: getTenants,
         saveTenant: saveTenant,
         updateTenant: updateTenant,
+        getFormsByTenantId: getFormsByTenantId,
         deleteTenant: deleteTenant,
         getFormById: getFormById,
         saveForm: saveForm,
