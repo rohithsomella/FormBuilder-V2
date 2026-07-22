@@ -18,6 +18,6 @@
 
         public List<string> Tags { get; set; } = new();
 
-        public Guid TenantId { get; set; } = Guid.Empty;
+        public Guid? TenantId { get; set; }
     }
 }

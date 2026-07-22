@@ -238,7 +238,7 @@ namespace FormBuilderAppService.Repositories
                 Created = form.Created,
                 Modified = form.Modified,
                 Tags = form.Tags,
-                TenantId = form.TenantId
+                TenantId = form.TenantId ?? Guid.Empty
             };
         }
 

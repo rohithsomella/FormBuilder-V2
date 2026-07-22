@@ -33,7 +33,7 @@ namespace FormBuilderAppService.Models
 
         [BsonElement("project")]
         [BsonRepresentation(BsonType.String)]
-        public Guid TenantId { get; set; } = Guid.Empty;
+        public Guid? TenantId { get; set; }
 
     }
 }
