@@ -316,7 +316,9 @@ var FormBuilderApi = (function() {
             name: formData.name || '',
             title: formData.title || '',
             tags: formData.tags || [],
-            components: formData.components || {}
+            components: formData.components || {},
+            Created:formData.created||{},
+            Modified:formData.Modified||{}
         };
 
         $.ajax({
@@ -776,45 +778,69 @@ var FormBuilderApi = (function() {
     /**
      * Display forms for current page
      */
-    function displayPaginatedForms() {
-        var tableBody = document.getElementById('formsTableBody');
-        var formsTable = document.getElementById('formsTable');
+   
+function displayPaginatedForms() {
+    var tableBody = document.getElementById('formsTableBody');
+    var formsTable = document.getElementById('formsTable');
 
-        if (!tableBody || !formsTable) {
-            return;
+    if (!tableBody || !formsTable) {
+        return;
+    }
+    tableBody.innerHTML = '';
+
+    var startIndex = (paginationState.currentPage - 1) * paginationState.itemsPerPage;
+    var endIndex = startIndex + paginationState.itemsPerPage;
+    var pageItems = paginationState.filteredForms.slice(startIndex, endIndex);
+
+    pageItems.forEach(function (form) {
+        var tagsDisplay = (form.tags || []).join(', ');
+        // Show Updated if available, otherwise Created
+        var dateText = '';
+
+        if (form.modified) {
+            dateText = 'Updated: ' + new Date(form.modified).toLocaleString();
+        }
+        else if (form.created) {
+            dateText = 'Created: ' + new Date(form.created).toLocaleString();
         }
 
-        tableBody.innerHTML = '';
+        var row = document.createElement('tr');
 
-        var startIndex = (paginationState.currentPage - 1) * paginationState.itemsPerPage;
-        var endIndex = startIndex + paginationState.itemsPerPage;
-        var pageItems = paginationState.filteredForms.slice(startIndex, endIndex);
+        row.innerHTML =
+            '<td>' +
+                '<strong>' + escapeHtml(form.title || '') + '</strong><br>' +
+                '<small class="text-muted">' + dateText + '</small>' +
+            '</td>' +
 
-        pageItems.forEach(function(form) {
-            var row = document.createElement('tr');
-            var tagsDisplay = (form.tags || []).join(', ');
-            row.innerHTML = '<td><strong>' + escapeHtml(form.title || '') + '</strong></td>' +
-                '<td style="text-align: right;">' + escapeHtml(tagsDisplay) + '</td>' +
-                '<td style="text-align: right;">' +
-                '<button class="btn btn-sm btn-primary" title="Edit form details" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.editForm(\'' + form.id + '\')">' +
-                '<i class="bi bi-pencil"></i>' +
+            '<td style="text-align:right;">' +
+                escapeHtml(tagsDisplay) +
+            '</td>' +
+
+            '<td style="text-align:right;">' +
+
+                '<button class="btn btn-sm btn-primary" title="Edit form details" onclick="FormBuilderApi.editForm(\'' + form.id + '\')">' +
+                    '<i class="bi bi-pencil"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-secondary" title="Copy form schema" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.copyForm(\'' + form.id + '\')">' +
-                '<i class="bi bi-copy"></i>' +
+
+                '<button class="btn btn-sm btn-secondary" title="Copy form schema" onclick="FormBuilderApi.copyForm(\'' + form.id + '\')">' +
+                    '<i class="bi bi-copy"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-info" title="Preview form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.launchForm(\'' + form.id + '\')">' +
-                '<i class="bi bi-box-arrow-up-right"></i>' +
+
+                '<button class="btn btn-sm btn-info" title="Preview form" onclick="FormBuilderApi.launchForm(\'' + form.id + '\')">' +
+                    '<i class="bi bi-box-arrow-up-right"></i>' +
                 '</button> ' +
-                '<button class="btn btn-sm btn-danger" title="Delete form" data-toggle="tooltip" data-placement="bottom" onclick="FormBuilderApi.deleteForm(\'' + form.id + '\')">' +
-                '<i class="bi bi-trash"></i>' +
+
+                '<button class="btn btn-sm btn-danger" title="Delete form" onclick="FormBuilderApi.deleteForm(\'' + form.id + '\')">' +
+                    '<i class="bi bi-trash"></i>' +
                 '</button>' +
-                '</td>';
-            tableBody.appendChild(row);
-        });
 
-        formsTable.style.display = 'table';
-    }
+            '</td>';
 
+        tableBody.appendChild(row);
+    });
+
+    formsTable.style.display = 'table';
+}
     /**
      * Render pagination controls
      */

@@ -1641,10 +1641,20 @@ if (typeof $ !== 'undefined') {
     console.log('Warning: jQuery not available for modal initialization');
 }
 
-// Page-specific initialization
-document.addEventListener('DOMContentLoaded', function() {
-    // Load forms table for existingForms.html page
+ // Page-specific initialization
+
+document.addEventListener('DOMContentLoaded', function () {
+    // Existing Forms Page
     if (document.getElementById('formsTable')) {
+        var params = new URLSearchParams(window.location.search);
+        var tenantName = params.get('tenantName');
+
+        if (tenantName) {
+            var heading = document.getElementById('pageHeading');
+            if (heading) {
+                heading.innerHTML = ' Forms <span style="color: #6c757d;font-size:22px">' + decodeURIComponent(tenantName) + '</span>';
+            }
+        }
         FormBuilderApi.loadFormsTable();
     }
 

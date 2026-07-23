@@ -361,9 +361,16 @@ var TenantHandler = (function () {
     // Open Tenant
 
 function openTenant(tenantId) {
-    window.location.href = 'existingForms.html?tenantId=' + encodeURIComponent(tenantId);
-}
+   
+    var tenant = tenantPaginationState.allTenants.find(function (t) {
+        return t.id === tenantId;
+    });
 
+    var tenantName = tenant ? tenant.name : '';
+
+    window.location.href = 'existingForms.html?tenantId=' + encodeURIComponent(tenantId) +
+                           '&tenantName=' + encodeURIComponent(tenantName);
+}
     // Delete Tenants
     function deleteTenant(tenantId) {
         if (!tenantId) {
