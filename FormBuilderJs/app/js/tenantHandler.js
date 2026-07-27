@@ -310,7 +310,7 @@ var TenantHandler = (function () {
     }
 
     // save tenant 
-    function saveTenant() {
+    function updateTenant() {
         console.log("Save button clicked");
 
         var tenantId = $('#editTenantId').val();
@@ -398,7 +398,7 @@ function openTenant(tenantId) {
     return {
         loadTenantsTable: loadTenantsTable,
         editTenant: editTenant,
-        saveTenant: saveTenant,
+        updateTenant: updateTenant,
         openTenant: openTenant,
         deleteTenant: deleteTenant,
         previousTenantPage: previousTenantPage,
