@@ -295,16 +295,15 @@ var FormBuilderApi = (function() {
     /**
      * Save a new form
      * @param {Object} formData - The form data object
-     * @param {String} formData.Name - Form name
-     * @param {String} formData.Title - Form title
-     * @param {Array} formData.Tags - Form tags
-     * @param {Object} formData.Components - Form JSON configuration
+     * @param {String} formData.name - Form name
+     * @param {String} formData.title - Form title
+     * @param {Array} formData.tags - Form tags
+     * @param {Object} formData.components - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
     function saveForm(formData, onSuccess, onError) {
         if (!formData) {
-            console.error('Form data is required');
             if (onError) {
                 onError('Form data is required', 400);
             }
@@ -316,9 +315,8 @@ var FormBuilderApi = (function() {
             name: formData.name || '',
             title: formData.title || '',
             tags: formData.tags || [],
-            components: formData.components || {},
-            Created:formData.created||{},
-            Modified:formData.Modified||{}
+            // Ensure components is a string (JSON stringified)
+            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {})
         };
 
         $.ajax({
@@ -328,16 +326,26 @@ var FormBuilderApi = (function() {
             dataType: 'json',
             data: JSON.stringify(payload),
             success: function(response) {
-                console.log('Form saved successfully:', response);
                 if (onSuccess) {
                     onSuccess(response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error saving form:', error);
                 var errorMessage = 'Error saving form';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
+                try {
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                } catch (e) {
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network error: Cannot reach the backend at ' + config.baseUrl;
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Bad request: Invalid form data';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'API endpoint not found: ' + config.baseUrl;
+                    } else if (xhr.status === 500) {
+                        errorMessage = 'Server error: ' + (xhr.responseText || 'Internal server error');
+                    }
                 }
                 if (onError) {
                     onError(errorMessage, xhr.status);
@@ -349,17 +357,16 @@ var FormBuilderApi = (function() {
     /**
      * Update form configuration (uses UpdateForm endpoint)
      * @param {Object} formData - The form data object
-     * @param {String} formData.Id - Form ID (MongoDB ObjectId)
-     * @param {String} formData.Name - Form name
-     * @param {String} formData.Title - Form title
-     * @param {Array} formData.Tags - Form tags
-     * @param {Object} formData.Components - Form JSON configuration
+     * @param {String} formData.id - Form ID (MongoDB ObjectId)
+     * @param {String} formData.name - Form name
+     * @param {String} formData.title - Form title
+     * @param {Array} formData.tags - Form tags
+     * @param {Object} formData.components - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */
     function updateForm(formData, onSuccess, onError) {
         if (!formData || !formData.id) {
-            console.error('Form data with id is required');
             if (onError) {
                 onError('Form data with id is required', 400);
             }
@@ -372,26 +379,39 @@ var FormBuilderApi = (function() {
             name: formData.name || '',
             title: formData.title || '',
             tags: formData.tags || [],
-            components: formData.components || {}
+            // Ensure components is a string (JSON stringified)
+            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {})
         };
 
+        var updateUrl = config.baseUrl + '/' + formData.id;
+
         $.ajax({
-            url: config.baseUrl + '/' + formData.id,
+            url: updateUrl,
             type: 'PUT',
             contentType: config.contentType,
             dataType: 'json',
             data: JSON.stringify(payload),
             success: function(response) {
-                console.log('Form updated successfully:', response);
                 if (onSuccess) {
                     onSuccess(response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('Error updating form:', error);
                 var errorMessage = 'Error updating form';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
+                try {
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                } catch (e) {
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network error: Cannot reach the backend at ' + updateUrl;
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Bad request: Invalid form data';
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'Form not found or endpoint not found: ' + updateUrl;
+                    } else if (xhr.status === 500) {
+                        errorMessage = 'Server error: ' + (xhr.responseText || 'Internal server error');
+                    }
                 }
                 if (onError) {
                     onError(errorMessage, xhr.status);
@@ -1059,7 +1079,6 @@ function displayPaginatedForms() {
     function submitFormData(submission, onSuccess, onError) {
         // Validate submission is an object
         if (!submission || typeof submission !== 'object') {
-            console.error('❌ Submission must be a valid object');
             if (onError) {
                 onError('Submission must be a valid object', 400);
             }
@@ -1068,16 +1087,14 @@ function displayPaginatedForms() {
 
         // Validate form property exists and is not empty
         if (!submission.form || (typeof submission.form === 'string' && submission.form.trim() === '')) {
-            console.error('❌ Submission must contain a "form" property with Form ID');
             if (onError) {
                 onError('Submission must contain a "form" property with the Form ID', 400);
             }
             return;
         }
 
-        // Validate data property exists
-        if (!submission.data) {
-            console.error('❌ Submission must contain a "data" property');
+        // Validate data property exists - allow empty objects as valid data
+        if (submission.data === undefined || submission.data === null) {
             if (onError) {
                 onError('Submission must contain form data', 400);
             }
@@ -1094,16 +1111,27 @@ function displayPaginatedForms() {
             dataType: 'json',
             data: JSON.stringify(payload),
             success: function(response) {
-                console.log('✅ Submission saved:', response.submissionId);
                 if (onSuccess) {
                     onSuccess(response);
                 }
             },
             error: function(xhr, status, error) {
-                console.error('❌ Error submitting form:', error);
                 var errorMessage = 'Error submitting form';
-                if (xhr.responseJSON && xhr.responseJSON.message) {
-                    errorMessage = xhr.responseJSON.message;
+                
+                try {
+                    if (xhr.responseJSON && xhr.responseJSON.message) {
+                        errorMessage = xhr.responseJSON.message;
+                    }
+                } catch (e) {
+                    if (xhr.status === 0) {
+                        errorMessage = 'Network error: Cannot reach the backend at ' + submissionUrl;
+                    } else if (xhr.status === 400) {
+                        errorMessage = 'Bad request: ' + (xhr.responseText || 'Invalid form data');
+                    } else if (xhr.status === 404) {
+                        errorMessage = 'API endpoint not found: ' + submissionUrl;
+                    } else if (xhr.status === 500) {
+                        errorMessage = 'Server error: ' + (xhr.responseText || 'Internal server error');
+                    }
                 }
                 if (onError) {
                     onError(errorMessage, xhr.status);
