@@ -310,13 +310,17 @@ var FormBuilderApi = (function() {
             return;
         }
 
+        // Get tenantId - send as-is
+        var tenantId = formData.tenantId || sessionStorage.getItem('editingFormTenantId') || null;
+
         // Prepare the request payload
         var payload = {
             name: formData.name || '',
             title: formData.title || '',
             tags: formData.tags || [],
             // Ensure components is a string (JSON stringified)
-            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {})
+            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {}),
+            tenantId: tenantId
         };
 
         $.ajax({
@@ -373,6 +377,9 @@ var FormBuilderApi = (function() {
             return;
         }
 
+        // Get tenantId - send as-is
+        var tenantId = formData.tenantId || sessionStorage.getItem('editingFormTenantId') || null;
+
         // Prepare the request payload
         var payload = {
             id: formData.id,
@@ -380,8 +387,12 @@ var FormBuilderApi = (function() {
             title: formData.title || '',
             tags: formData.tags || [],
             // Ensure components is a string (JSON stringified)
-            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {})
+            components: typeof formData.components === 'string' ? formData.components : JSON.stringify(formData.components || {}),
+            // Include tenantId
+            tenantId: tenantId
         };
+
+        console.log('📤 PUT payload tenantId:', payload.tenantId);
 
         var updateUrl = config.baseUrl + '/' + formData.id;
 
@@ -447,6 +458,11 @@ var FormBuilderApi = (function() {
 
         if (tenantId) {
             console.log("Tenant ID detected in URL:", tenantId);
+            
+            // Store tenant ID in sessionStorage so it's available when editing forms
+            // This ensures tenant context is preserved even if form doesn't have project field
+            sessionStorage.setItem('editingFormTenantId', tenantId);
+            console.log('✅ Tenant ID stored in sessionStorage for editing context');
             
             getFormsByTenantId(tenantId, 
                 function(tenantForms) {
@@ -551,15 +567,22 @@ var FormBuilderApi = (function() {
         }
         
         console.log('Form found for editing:', form);
+        console.log('Form object keys:', Object.keys(form));
+        console.log('Form.tenantId:', form.tenantId);
+        console.log('Form.project:', form.project);
+        
         // Store form data in sessionStorage
         sessionStorage.setItem('editingFormId', formId);
+        console.log('Final tenantId being stored:', form.tenantId);
+        
         sessionStorage.setItem('editingFormData', JSON.stringify({
             id: form.id,
             name: form.name,
             title: form.title,
             tags: form.tags,
             components: form.components,
-            versionId: form.versionId
+            versionId: form.versionId,
+            tenantId: form.tenantId  // Include tenant ID in the stored data
         }));
         // Redirect to builder
         window.location.href = 'index.html';

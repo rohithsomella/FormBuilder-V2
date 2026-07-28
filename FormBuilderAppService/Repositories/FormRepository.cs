@@ -222,7 +222,8 @@ namespace FormBuilderAppService.Repositories
                 Created = dto.Created,
                 Modified = dto.Modified,
                 Tags = dto.Tags ?? new(),
-                TenantId = dto.TenantId
+                // Normalize TenantId to uppercase for consistent case-insensitive filtering
+                TenantId = dto.TenantId.HasValue ? dto.TenantId.Value : (Guid?)null
             };
         }
 
@@ -248,8 +249,8 @@ namespace FormBuilderAppService.Repositories
             {
                 _logger.LogInformation("Fetching forms for TenantId: {TenantId}", tenantId);
 
-                // Convert Guid to uppercase string to match MongoDB data format
-                var tenantIdString = tenantId.ToString().ToUpper();
+                // Normalize to uppercase - all saved forms have project field in uppercase
+                var tenantIdString = tenantId.ToString();//.ToUpper();
                 var filter = Builders<Form>.Filter.Eq("project", tenantIdString);
                 var forms = _forms.Find(filter).ToList();
 

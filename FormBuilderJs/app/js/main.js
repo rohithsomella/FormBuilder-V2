@@ -386,7 +386,15 @@ try {
     console.log('📋 Checking editing form data... Found:', !!editingFormDataStr);
     if (editingFormDataStr) {
         editingFormData = JSON.parse(editingFormDataStr);
-        console.log('✏️ Loading form for editing:', editingFormData.title);
+        
+        // Ensure tenantId from editingFormData is also stored in sessionStorage for updateForm calls
+        // This handles both cases: when tenantId came from form AND when it came from URL context
+        if (editingFormData.tenantId) {
+            sessionStorage.setItem('editingFormTenantId', editingFormData.tenantId);
+            console.log('✅ TenantId synced to sessionStorage:', editingFormData.tenantId);
+        } else {
+            console.log('⚠️ Warning: editingFormData.tenantId is empty. SessionStorage tenantId:', sessionStorage.getItem('editingFormTenantId'));
+        }
         
         // Store the form name and tags from editing data
         currentFormName = editingFormData.title || 'Untitled Form';
@@ -1277,7 +1285,9 @@ try {
                         name: editingFormData.name,
                         title: $('#formTitleInput').val() || currentFormName,
                         tags: formTags,
-                        components: JSON.stringify(finalSchema)
+                        components: JSON.stringify(finalSchema),
+                        // Include tenant ID if this form belongs to a tenant
+                        tenantId: editingFormData.tenantId || sessionStorage.getItem('editingFormTenantId')
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1553,7 +1563,9 @@ if (typeof $ !== 'undefined') {
                         name: editingFormData.name,
                         title: $('#formTitleInput').val() || currentFormName,
                         tags: formTags,
-                        components: JSON.stringify(finalSchema)
+                        components: JSON.stringify(finalSchema),
+                        // Include tenant ID if this form belongs to a tenant
+                        tenantId: editingFormData.tenantId || sessionStorage.getItem('editingFormTenantId')
                     };
                     
                     FormBuilderApi.updateForm(updateData,
@@ -1582,7 +1594,9 @@ if (typeof $ !== 'undefined') {
                     name: newFormName.replace(/\s+/g, '-').toLowerCase(),
                     title: newFormName,
                     tags: formTags,
-                    components: JSON.stringify(finalSchema)
+                    components: JSON.stringify(finalSchema),
+                    // Include tenant ID if this form is being created for a tenant
+                    tenantId: sessionStorage.getItem('editingFormTenantId') || null
                 };
                 
                 FormBuilderApi.saveForm(saveData,

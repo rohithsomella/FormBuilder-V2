@@ -1,5 +1,7 @@
 ﻿namespace FormBuilderAppService.Models.DTOs
 {
+    using Newtonsoft.Json;
+
     public class FormDto
     {
         public string? Id { get; set; }
@@ -18,6 +20,7 @@
 
         public List<string> Tags { get; set; } = new();
 
+        [JsonProperty("tenantId")]
         public Guid? TenantId { get; set; }
     }
 }
