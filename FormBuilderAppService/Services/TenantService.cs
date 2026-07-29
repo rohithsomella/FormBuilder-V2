@@ -27,6 +27,12 @@ namespace FormBuilderAppService.Services
         {
             _tenantRepository.DeleteTenant(tenantId, deletedBy);
         }
+
+        public async Task<bool> SaveTenant(string tenantName)
+        {
+            return await _tenantRepository.SaveTenant(tenantName);
+        }
+
     }
 }
 

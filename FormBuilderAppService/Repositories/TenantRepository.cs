@@ -1,8 +1,9 @@
 using Dapper;
+using FormBuilderAppService.Models;
 using FormBuilderAppService.Repositories.Interfaces;
 using Microsoft.Data.SqlClient;
+using MongoDB.Driver.Core.Configuration;
 using System.Data;
-using FormBuilderAppService.Models;
 
 namespace FormBuilderAppService.Repositories
 {
@@ -66,6 +67,24 @@ namespace FormBuilderAppService.Repositories
                     },
                     commandType: CommandType.StoredProcedure);
             }
+        }
+
+
+        public async Task<bool> SaveTenant(string tenantName)
+        {
+            using SqlConnection connection = new SqlConnection(GetConnectionString());
+
+            await connection.OpenAsync();
+
+            await connection.ExecuteAsync(
+                "dbo.SaveTenant",
+                new
+                {
+                    TenantName = tenantName
+                },
+                commandType: CommandType.StoredProcedure);
+
+            return true;
         }
     }
 }

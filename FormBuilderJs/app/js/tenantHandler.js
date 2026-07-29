@@ -288,75 +288,105 @@ var TenantHandler = (function () {
         }
     }
 
-    // edit tenant - handles pulling the correct record data and opening the modal
-    function editTenant(tenantId) {
-        var tenant = tenantPaginationState.allTenants.find(function (t) {
-            return t.id === tenantId;
-        });
-
-        if (!tenant) {
-            alert('Tenant not found');
-            return;
-        }
-
+  
+// Reset/clear modal form helper
+function addTenant() {
+    $('#tenantId').val('');
+    $('#tenantName').val('');
+    $('#tenantModalTitle').text('Add New Tenant');
+    $('#btnSaveTenant').text('Save');
+    
+    if (typeof resetMessage === 'function') {
+        resetMessage();
+    } else {
         $('#tenantMessage').hide().removeClass('alert-success alert-danger').text('');
+    }
+    
+    $('#tenantModal').modal('show');
+}
 
-        // Load values into the Bootstrap modal inputs
-        $('#editTenantId').val(tenant.id);
-        $('#editTenantName').val(tenant.name);
+// Edit tenant - populates existing details into the unified modal
+function editTenant(tenantId) {
+    var tenant = tenantPaginationState.allTenants.find(function (t) {
+        return t.id === tenantId;
+    });
 
-        // Open the modal display
-        $('#editTenantModal').modal('show');
+    if (!tenant) {
+        alert('Tenant not found');
+        return;
     }
 
-    // save tenant 
-    function updateTenant() {
-        console.log("Save button clicked");
+    if (typeof resetMessage === 'function') {
+        resetMessage();
+    } else {
+        $('#tenantMessage').hide().removeClass('alert-success alert-danger').text('');
+    }
 
-        var tenantId = $('#editTenantId').val();
-        var tenantName = $('#editTenantName').val().trim();
+    // Populate input fields
+    $('#tenantId').val(tenant.id);
+    $('#tenantName').val(tenant.name);
 
-        if (!tenantName) {
+    // Update Modal UI labels
+    $('#tenantModalTitle').text('Edit Tenant');
+    $('#btnSaveTenant').text('Update');
+
+    $('#tenantModal').modal('show');
+}
+
+// Handles both Add and Edit operations
+function saveOrUpdateTenant() {
+    var tenantId = $('#tenantId').val();
+    var tenantName = $('#tenantName').val().trim();
+
+    if (typeof resetMessage === 'function') {
+        resetMessage();
+    } else {
+        $('#tenantMessage').hide().removeClass('alert-success alert-danger').text('');
+    }
+
+    if (!tenantName) {
+        $('#tenantMessage')
+            .removeClass('alert-success')
+            .addClass('alert alert-danger')
+            .text('Tenant name cannot be empty.')
+            .show();
+        return;
+    }
+
+    var tenantData = {
+        tenantId: tenantId,
+        tenantName: tenantName
+    };
+
+    var isEditMode = Boolean(tenantId);
+    var apiAction = isEditMode ? FormBuilderApi.updateTenant : FormBuilderApi.saveTenant;
+    var successMessage = isEditMode ? 'Tenant updated successfully.' : 'Tenant saved successfully.';
+
+    apiAction(
+        tenantData,
+        function (response) {
+            $('#tenantMessage')
+                .removeClass('alert-danger')
+                .addClass('alert alert-success')
+                .text(successMessage)
+                .show();
+
+            setTimeout(function () {
+                $('#tenantModal').modal('hide');
+                if (typeof resetMessage === 'function') resetMessage();
+                loadTenantsTable();
+            }, 1200);
+        },
+        function (error) {
             $('#tenantMessage')
                 .removeClass('alert-success')
                 .addClass('alert alert-danger')
-                .text('Tenant name cannot be empty.')
+                .text(error || (isEditMode ? 'Error updating tenant.' : 'Failed to save tenant.'))
                 .show();
-            return;
         }
+    );
+}
 
-        var tenantData = {
-            tenantId: tenantId,
-            tenantName: tenantName
-        };
-
-        // Call API helper to update the record on the server
-        FormBuilderApi.updateTenant(
-            tenantData,
-            function (response) {
-                $('#tenantMessage')
-                    .removeClass('alert-danger')
-                    .addClass('alert alert-success')
-                    .text('Tenant updated successfully.')
-                    .show();
-
-                setTimeout(function () {
-                    $('#editTenantModal').modal('hide');
-                    $('#tenantMessage').hide();
-
-                    loadTenantsTable();
-                }, 1200);
-            },
-            function (error) {
-
-                $('#tenantMessage')
-                    .removeClass('alert-success')
-                    .addClass('alert alert-danger')
-                    .text(error || 'An error occurred while updating.')
-                    .show();
-            }
-        );
-    }
 
     // Open Tenant
 
@@ -398,11 +428,13 @@ function openTenant(tenantId) {
     return {
         loadTenantsTable: loadTenantsTable,
         editTenant: editTenant,
-        updateTenant: updateTenant,
         openTenant: openTenant,
         deleteTenant: deleteTenant,
         previousTenantPage: previousTenantPage,
-        nextTenantPage: nextTenantPage
+        nextTenantPage: nextTenantPage,
+        addTenant: addTenant,
+        saveOrUpdateTenant: saveOrUpdateTenant
+        
     };
 
 })();

@@ -466,4 +466,23 @@ BEGIN
       AND IsDeleted = 0; -- Only update if it hasn't been soft-deleted
 END
 GO
-/*=========================================================
+
+-- *=========================================================
+--     PROCEDURE : SaveTenants
+-- =========================================================*/
+
+CREATE PROCEDURE dbo.SaveTenant
+(
+    @TenantName NVARCHAR(200)
+)
+AS
+BEGIN
+    INSERT INTO dbo.Tenants
+    (
+        tenantName
+    )
+    VALUES
+    (
+        @tenantName
+    )
+END

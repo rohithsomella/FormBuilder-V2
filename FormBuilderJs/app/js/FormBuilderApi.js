@@ -295,10 +295,10 @@ var FormBuilderApi = (function() {
     /**
      * Save a new form
      * @param {Object} formData - The form data object
-     * @param {String} formData.name - Form name
-     * @param {String} formData.title - Form title
-     * @param {Array} formData.tags - Form tags
-     * @param {Object} formData.components - Form JSON configuration
+     * @param {String} formData.Name - Form name
+     * @param {String} formData.Title - Form title
+     * @param {Array} formData.Tags - Form tags
+     * @param {Object} formData.Components - Form JSON configuration
      * @param {Function} onSuccess - Callback function on success
      * @param {Function} onError - Callback function on error
      */

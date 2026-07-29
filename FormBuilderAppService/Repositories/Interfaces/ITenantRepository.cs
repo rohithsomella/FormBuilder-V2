@@ -8,5 +8,7 @@ namespace FormBuilderAppService.Repositories.Interfaces
         void UpdateTenant(Tenant model);
 
         void DeleteTenant(Guid tenantId, string? deletedBy = null);
+
+        Task<bool> SaveTenant(string tenantName);
     }
 }

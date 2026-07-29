@@ -11,9 +11,7 @@ namespace FormBuilderAppService.Controllers
         private readonly ITenantService _tenantService;
         private readonly ILogger<TenantController> _logger;
 
-        public TenantController(
-            ITenantService tenantService,
-            ILogger<TenantController> _logger)
+        public TenantController( ITenantService tenantService, ILogger<TenantController> _logger)
         {
             _tenantService = tenantService;
             this._logger = _logger;
@@ -83,5 +81,35 @@ namespace FormBuilderAppService.Controllers
                 return StatusCode(500, new { message = "Error deleting tenant." });
             }
         }
+
+
+
+        [HttpPost]
+        public async Task<IActionResult> SaveTenant([FromBody] Tenant tenant)
+        {
+           
+            if (tenant == null || string.IsNullOrWhiteSpace(tenant.TenantName))
+            {
+                return BadRequest(new { message = "Tenant name cannot be empty." });
+            }
+
+            try
+            {
+              
+                var result = await _tenantService.SaveTenant(tenant.TenantName);
+
+                _logger.LogInformation("Tenant '{TenantName}' saved successfully.", tenant.TenantName);
+
+                return Ok(result);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Error occurred while saving tenant.");
+                return StatusCode(500, new { message = "An error occurred while processing your request." });
+            }
+        }
+    
+
+
     }
 }
