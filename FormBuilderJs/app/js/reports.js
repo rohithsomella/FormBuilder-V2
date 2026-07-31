@@ -31,8 +31,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var reportModal = document.getElementById('reportModal');
             if (reportModal && reportModal.submissionsData) {
                 var selectedSubmissions = getSelectedSubmissions();
-                var dataToExport = selectedSubmissions.length > 0 ? selectedSubmissions : reportModal.submissionsData;
-                exportToJson(dataToExport, reportModal.formName);
+
+                // Requirement Check: Alert if no report is selected
+                if (selectedSubmissions.length === 0) {
+                    alert('Select one report');
+                    return;
+                }
+
+                exportToJson(selectedSubmissions, reportModal.formName);
             }
         });
     }
@@ -44,8 +50,14 @@ document.addEventListener('DOMContentLoaded', function() {
             var reportModal = document.getElementById('reportModal');
             if (reportModal && reportModal.submissionsData) {
                 var selectedSubmissions = getSelectedSubmissions();
-                var dataToExport = selectedSubmissions.length > 0 ? selectedSubmissions : reportModal.submissionsData;
-                exportToCsv(dataToExport, reportModal.formName);
+
+                // Requirement Check: Alert if no report is selected
+                if (selectedSubmissions.length === 0) {
+                    alert('Select one report');
+                    return;
+                }
+
+                exportToCsv(selectedSubmissions, reportModal.formName);
             }
         });
     }
@@ -91,6 +103,12 @@ function generateReport(formId) {
  * @param {Object} form - The form object
  * @param {Array} submissions - Array of submission objects
  */
+
+/**
+ * Display the report dialog with submissions
+ * @param {Object} form - The form object
+ * @param {Array} submissions - Array of submission objects
+ */
 function displayReportDialog(form, submissions) {
     var modalLabel = document.getElementById('reportModalLabel');
     var submissionsTableBody = document.getElementById('submissionsTableBody');
@@ -105,7 +123,7 @@ function displayReportDialog(form, submissions) {
     }
 
     // Set modal title
-    modalLabel.textContent = form.formName || 'Form Report';
+    modalLabel.textContent = form.formName || form.title || 'Form Report';
 
     // Clear previous content
     submissionsTableBody.innerHTML = '';
@@ -117,32 +135,54 @@ function displayReportDialog(form, submissions) {
         reportErrorMessage.style.display = 'block';
         submissionsTable.style.display = 'none';
     } else {
-        // Populate submissions table with checkboxes
-        submissions.forEach(function(submission, index) {
+        // Populate submissions table
+        submissions.forEach(function (submission, index) {
             var row = document.createElement('tr');
-            var submissionDate = new Date(submission.submissionDate);
-            var formattedDate = submissionDate.toLocaleString();
-            
-            row.innerHTML = '<td><input type="checkbox" class="submission-checkbox" data-index="' + index + '" title="Select this submission"></td>' +
-                '<td>' + escapeHtml(submission.submissionId || '') + '</td>' +
-                '<td>' + escapeHtml(formattedDate) + '</td>';
-            
-            // Make entire row clickable to toggle checkbox
+
+            // Format dates safely (ONLY DATE, NO TIME)
+            var submissionDate = submission.submissionDate || submission.created || submission.createdAt;
+            var formattedSubDate = submissionDate ? new Date(submissionDate).toLocaleDateString() : 'N/A';
+
+            var modifiedDate = submission.modifiedDate || submission.modified || submission.updatedAt;
+            var formattedModDate = modifiedDate ? new Date(modifiedDate).toLocaleDateString() : 'N/A';
+            var submissionId = submission.submissionId || submission.id || submission._id || '';
+            var version = submission.version || submission._vid || '1.0';
+
+            row.innerHTML =
+                '<td><input type="checkbox" class="submission-checkbox" data-index="' + index + '" title="Select this submission"></td>' +
+                '<td>' + escapeHtml(submissionId) + '</td>' +
+                '<td>' + escapeHtml(String(version)) + '</td>' +
+                '<td>' + escapeHtml(formattedSubDate) + '</td>' +
+                '<td>' + escapeHtml(formattedModDate) + '</td>' +
+                '<td style="text-align: center;">' +
+                '<button class="btn btn-sm btn-outline-secondary view-submission-btn" title="View Submission" data-index="' + index + '">' +
+                '<i class="bi bi-eye"></i>' +
+                '</button>' +
+                '</td>';
+
+            // Row click event (excluding checkbox and action button clicks)
             row.style.cursor = 'pointer';
-            row.addEventListener('click', function(event) {
-                // Don't toggle if clicking the checkbox directly
-                if (event.target.type === 'checkbox') {
+            row.addEventListener('click', function (event) {
+                if (event.target.type === 'checkbox' || event.target.closest('.view-submission-btn')) {
                     return;
                 }
                 var checkbox = row.querySelector('.submission-checkbox');
                 if (checkbox) {
                     checkbox.checked = !checkbox.checked;
-                    // Trigger change event to update select all checkbox
                     var changeEvent = new Event('change', { bubbles: true });
                     checkbox.dispatchEvent(changeEvent);
                 }
             });
-            
+
+            // Action button click event
+            var viewBtn = row.querySelector('.view-submission-btn');
+            if (viewBtn) {
+                viewBtn.addEventListener('click', function (e) {
+                    e.stopPropagation();
+                    viewSubmissionDetails(submission);
+                });
+            }
+
             submissionsTableBody.appendChild(row);
         });
 
@@ -156,19 +196,27 @@ function displayReportDialog(form, submissions) {
 
     // Store submissions in modal for export functions
     reportModal.submissionsData = submissions;
-    reportModal.formName = form.formName;
+    reportModal.formName = form.formName || form.title;
 
     // Show modal
     try {
         if ($('#reportModal').length > 0) {
             $('#reportModal').modal('show');
-            console.log('Modal shown successfully');
         } else {
             console.error('Report modal element not found for display');
         }
     } catch (error) {
         console.error('Error showing modal:', error);
     }
+}
+
+/**
+ * Handle viewing individual submission details when clicking the Eye icon
+ */
+function viewSubmissionDetails(submission) {
+    console.log('Viewing submission details:', submission);
+    // Add custom code or open preview modal here
+    alert('Submission Details:\n' + JSON.stringify(submission, null, 2));
 }
 
 /**
@@ -290,7 +338,7 @@ function flattenObject(obj, prefix = '') {
         if (obj.hasOwnProperty(key)) {
             var value = obj[key];
             var newKey = prefix ? prefix + '.' + key : key;
-            
+
             // Check if value is an object (but not null, date, or array)
             if (value !== null && typeof value === 'object' && !Array.isArray(value) && !(value instanceof Date)) {
                 // Recursively flatten nested objects
@@ -326,7 +374,7 @@ function escapeCsvValue(value) {
     }
     
     var stringValue = String(value);
-    
+
     // If value contains comma, double quote, or newline, wrap in quotes and escape quotes
     if (stringValue.indexOf(',') !== -1 || stringValue.indexOf('"') !== -1 || stringValue.indexOf('\n') !== -1) {
         return '"' + stringValue.replace(/"/g, '""') + '"';
@@ -364,19 +412,17 @@ function extractFormData(submission) {
         var data = submission.data;
         return typeof data === 'string' ? parseSubmissionData(data) : data;
     }
-    
+
     // Check for submissionData field
     if (submission.submissionData) {
         var submData = submission.submissionData;
         return typeof submData === 'string' ? parseSubmissionData(submData) : submData;
     }
-    
     // Check for formData field
     if (submission.formData) {
         var formData = submission.formData;
         return typeof formData === 'string' ? parseSubmissionData(formData) : formData;
     }
-    
     // Otherwise, assume root level contains the form data (but exclude metadata fields)
     var formData = {};
     var metadataFields = ['submissionId', 'formId', 'submissionDate', 'id', 'createdAt', 'updatedAt', 'userId'];
@@ -414,15 +460,15 @@ function exportToCsv(submissions, formName) {
     // Collect all unique leaf-level keys from all submissions
     var allKeys = {};
     var flattenedSubmissions = [];
-    
-    submissions.forEach(function(submission) {
+
+    submissions.forEach(function (submission) {
         // Extract the actual form data from the submission
         var formData = extractFormData(submission);
-        
+
         // Flatten the form data
         var flattened = flattenObject(formData);
         flattenedSubmissions.push(flattened);
-        
+
         // Collect all keys
         for (var key in flattened) {
             if (flattened.hasOwnProperty(key)) {
@@ -430,34 +476,31 @@ function exportToCsv(submissions, formName) {
             }
         }
     });
-    
     // Sort keys for consistent column order
     var sortedKeys = Object.keys(allKeys).sort();
-    
+
     // Extract leaf-only key names for headers (remove path prefixes)
-    var leafKeyNames = sortedKeys.map(function(fullKey) {
+    var leafKeyNames = sortedKeys.map(function (fullKey) {
         // Get the last part after the final dot
         var parts = fullKey.split('.');
         return parts[parts.length - 1];
     });
-    
+
     // Create header row: Form Name, Form ID, Submission Date, then all other keys (leaf names only)
     var headerRow = ['Form Name', 'Form ID', 'Submission Date'].concat(leafKeyNames);
-    var csv = headerRow.map(function(header) {
+    var csv = headerRow.map(function (header) {
         return escapeCsvValue(header);
     }).join(',') + '\n';
-    
     // Add data rows
-    submissions.forEach(function(submission, index) {
+    submissions.forEach(function (submission, index) {
         var flattened = flattenedSubmissions[index];
         var rowValues = [
             formName || '',
             submission.formId || '',
             submission.submissionDate ? new Date(submission.submissionDate).toLocaleString() : ''
         ];
-        
         // Add values for all keys (empty string if key not present in this submission)
-        sortedKeys.forEach(function(key) {
+        sortedKeys.forEach(function (key) {
             rowValues.push(flattened[key] !== undefined ? flattened[key] : '');
         });
         
