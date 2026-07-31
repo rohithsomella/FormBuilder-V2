@@ -5,64 +5,92 @@
 
 // Show Success Message
 function showSuccessMessage(container, submissionId) {
-    // console.log('✅ showSuccessMessage called with container:', container, 'ID:', submissionId);
+    console.log('✅ showSuccessMessage called with container:', container, 'ID:', submissionId);
     
     // Create or get messages container
     let messagesContainer = document.getElementById('formMessagesContainer');
     if (!messagesContainer) {
         messagesContainer = document.createElement('div');
         messagesContainer.id = 'formMessagesContainer';
-        messagesContainer.style.cssText = 'position: relative; width: 100%;';
-        container.parentNode.insertBefore(messagesContainer, container);
-        // console.log('✅ Created new messages container');
+        messagesContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            z-index: 9999;
+        `;
+        document.body.appendChild(messagesContainer);
+        console.log('✅ Created new messages container');
     }
     
     var successMsg = document.createElement('div');
     successMsg.style.cssText = `
-        padding: 15px;
-        margin: 10px 20px;
-        border-radius: 4px;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 6px;
         background-color: #d4edda;
-        border: 1px solid #c3e6cb;
+        border: 2px solid #28a745;
         color: #155724;
+        font-size: 16px;
+        font-weight: 500;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
     `;
-    successMsg.innerHTML = '<i class="bi bi-check-circle"></i> <strong>Form submitted successfully!</strong> Submission ID: ' + submissionId;
+    successMsg.innerHTML = '<i class="bi bi-check-circle" style="font-size: 24px;"></i> <div><strong>Form submitted successfully!</strong><br><small>Submission ID: ' + submissionId + '</small></div>';
     messagesContainer.appendChild(successMsg);
-    // console.log('✅ Success message inserted into DOM');
+    console.log('✅ Success message inserted into DOM');
     
     // Auto-hide after 5 seconds
     setTimeout(function() {
         if (successMsg.parentNode) {
             successMsg.remove();
-            // console.log('✅ Success message removed after 5 seconds');
+            console.log('✅ Success message removed after 5 seconds');
         }
     }, 5000);
 }
 
 // Show Error Message
 function showErrorMessage(container, error) {
-    // console.log('❌ showErrorMessage called with error:', error);
+    console.log('❌ showErrorMessage called with error:', error);
     
     // Create or get messages container
     let messagesContainer = document.getElementById('formMessagesContainer');
     if (!messagesContainer) {
         messagesContainer = document.createElement('div');
         messagesContainer.id = 'formMessagesContainer';
-        messagesContainer.style.cssText = 'position: relative; width: 100%;';
-        container.parentNode.insertBefore(messagesContainer, container);
-        // console.log('✅ Created new messages container');
+        messagesContainer.style.cssText = `
+            position: fixed;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 90%;
+            max-width: 600px;
+            z-index: 9999;
+        `;
+        document.body.appendChild(messagesContainer);
+        console.log('✅ Created new messages container');
     }
     
     var errorMsg = document.createElement('div');
     errorMsg.style.cssText = `
-        padding: 15px;
-        margin: 10px 20px;
-        border-radius: 4px;
+        padding: 20px;
+        margin: 10px 0;
+        border-radius: 6px;
         background-color: #f8d7da;
-        border: 1px solid #f5c6cb;
+        border: 2px solid #dc3545;
         color: #721c24;
+        font-size: 16px;
+        font-weight: 500;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        display: flex;
+        align-items: center;
+        gap: 12px;
     `;
-    errorMsg.innerHTML = '<i class="bi bi-exclamation-circle"></i> <strong>Error submitting form:</strong> ' + error;
+    errorMsg.innerHTML = '<i class="bi bi-exclamation-circle" style="font-size: 24px;"></i> <div><strong>Error submitting form:</strong><br><small>' + error + '</small></div>';
     messagesContainer.appendChild(errorMsg);
     console.log('❌ Error message inserted into DOM');
 }
@@ -287,19 +315,45 @@ function handleFormSubmission(submission, formInstance, formContainer) {
             console.log('✅ Form submission saved successfully:', response.submissionId);
             showSuccessMessage(formContainer, response.submissionId);
 
-            // Reset the form after a delay so message is visible
+            // Hide the loading spinner from the submit button
             setTimeout(function() {
-                if (formInstance && typeof formInstance.clear === 'function') {
-                    formInstance.clear();
-                } else if (formInstance) {
-                    formInstance.submission = { data: {} };
-                }
-            }, 1500); // Wait 1.5 seconds before clearing
+                // Find all submit buttons in the form
+                var submitButtons = formContainer.querySelectorAll('button[type="submit"], button.btn-submit');
+                submitButtons.forEach(function(btn) {
+                    // Remove the loader/spinner icon
+                    var loaders = btn.querySelectorAll('.bi-refresh, i[class*="refresh"]');
+                    loaders.forEach(function(loader) {
+                        loader.remove();
+                    });
+                    // Also remove the loading class/attribute
+                    btn.classList.remove('loading');
+                    btn.removeAttribute('data-loading');
+                });
+                console.log('✅ Loading spinner hidden from submit button');
+            }, 100);
+
+            // Keep the form visible with the filled data - don't clear it
+            // User can see the submitted data on the form
         },
         function(error, statusCode) {
             console.error('❌ Error submitting form:', error);
             console.log('='.repeat(60));
             showErrorMessage(formContainer, error);
+
+            // Also hide the loading spinner on error
+            setTimeout(function() {
+                var submitButtons = formContainer.querySelectorAll('button[type="submit"], button.btn-submit');
+                submitButtons.forEach(function(btn) {
+                    var loaders = btn.querySelectorAll('.bi-refresh, i[class*="refresh"]');
+                    loaders.forEach(function(loader) {
+                        loader.remove();
+                    });
+                    btn.classList.remove('loading');
+                    btn.removeAttribute('data-loading');
+                    btn.removeAttribute('disabled');
+                });
+                console.log('✅ Loading spinner hidden from submit button after error');
+            }, 100);
         }
     );
 
