@@ -61,6 +61,12 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     }
+
+    // Reset checkboxes when modal closes
+    $('#reportModal').on('hidden.bs.modal', function() {
+        document.getElementById('selectAllCheckbox').checked = false;
+        document.querySelectorAll('.submission-checkbox').forEach(cb => cb.checked = false);
+    });
 });
 
 /**
