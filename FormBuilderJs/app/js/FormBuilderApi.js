@@ -463,6 +463,10 @@ var FormBuilderApi = (function() {
             // This ensures tenant context is preserved even if form doesn't have project field
             sessionStorage.setItem('editingFormTenantId', tenantId);
             console.log('✅ Tenant ID stored in sessionStorage for editing context');
+
+            // Show the tenant-specific action buttons
+            var tenantActions = document.getElementById('tenantFormActions');
+            if (tenantActions) tenantActions.style.display = 'flex';
             
             getFormsByTenantId(tenantId, 
                 function(tenantForms) {
@@ -1366,6 +1370,29 @@ function displayPaginatedForms() {
             }
         });
     }
+// for adding newform button in tenants
+    function addNewFormForTenant() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var tenantId = urlParams.get('tenantId');
+        if (tenantId) {
+            sessionStorage.setItem('editingFormTenantId', tenantId);
+        }
+        sessionStorage.removeItem('editingFormId');
+        sessionStorage.removeItem('editingFormData');
+        window.location.href = 'index.html';
+    }
+
+    function viewTenantReports() {
+        var urlParams = new URLSearchParams(window.location.search);
+        var tenantId = urlParams.get('tenantId');
+        var tenantName = urlParams.get('tenantName');
+        var url = 'reports.html';
+        if (tenantId) {
+            url += '?tenantId=' + encodeURIComponent(tenantId);
+            if (tenantName) url += '&tenantName=' + encodeURIComponent(tenantName);
+        }
+        window.location.href = url;
+    }
 
     // Public API
     return {
@@ -1393,6 +1420,8 @@ function displayPaginatedForms() {
         saveResource: saveResource,
         getAllResources: getAllResources,
         getResourcesList: getResourcesList,
+        addNewFormForTenant: addNewFormForTenant,
+        viewTenantReports: viewTenantReports,
         config: config
     };
 
