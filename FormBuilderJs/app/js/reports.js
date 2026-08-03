@@ -218,11 +218,37 @@ function displayReportDialog(form, submissions) {
 
 /**
  * Handle viewing individual submission details when clicking the Eye icon
+ * Opens the preview page with the submission data populated in the form
  */
 function viewSubmissionDetails(submission) {
-    console.log('Viewing submission details:', submission);
-    // Add custom code or open preview modal here
-    alert('Submission Details:\n' + JSON.stringify(submission, null, 2));
+    if (!submission) {
+        alert('Error: No submission data available');
+        return;
+    }
+
+    // Extract formId from submission
+    const formId = submission.formId || submission.form || submission._formId;
+    
+    if (!formId) {
+        alert('Error: Form ID not found in submission data');
+        return;
+    }
+
+    // Fetch the form schema from the database
+    FormBuilderApi.getFormById(formId,
+        function(form) {
+            // Store both form schema and submission data in sessionStorage
+            sessionStorage.setItem('previewFormSchema', JSON.stringify(form));
+            sessionStorage.setItem('submissionData', JSON.stringify(submission));
+            
+            // Open preview page in a new window
+            window.open('previewPage.html?mode=viewSubmission', '_blank', 'width=1000,height=800');
+        },
+        function(error, statusCode) {
+            console.error('Failed to load form:', error);
+            alert('Error: Failed to load form schema. ' + error);
+        }
+    );
 }
 
 /**

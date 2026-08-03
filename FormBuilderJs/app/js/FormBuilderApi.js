@@ -638,6 +638,11 @@ var FormBuilderApi = (function() {
      */
     function launchForm(formId) {
         console.log('Launch form:', formId);
+        
+        // Clear any submission data from previous submission viewer
+        sessionStorage.removeItem('submissionData');
+        console.log('✅ Cleared submission data from sessionStorage');
+        
         if (!formId) {
             alert('Form ID is required');
             return;

@@ -69,7 +69,8 @@
 
 <div class="preview-container">
     <div class="preview-header">
-        <h2>Form Preview</h2>
+        <h2 id="previewTitle">Form Preview</h2>
+        <button id="closeViewerBtn" class="btn btn-sm btn-secondary" style="display: none;" onclick="window.close()">Close</button>
     </div>
     <div id="previewFormContent">
         <div class="loading">
@@ -83,83 +84,7 @@
 <script src="../../dist/formio.full.js"></script>
 <script src="../js/FormBuilderApi.js"></script>
 <script src="../js/formSubmissionHandler.js"></script>
-
-<script>
-    // Get form schema from sessionStorage
-    const previewFormSchema = sessionStorage.getItem('previewFormSchema');
-    let previewFormId = sessionStorage.getItem('previewFormId');
-    const formContainer = document.getElementById('previewFormContent');
-
-    console.log('=== previewPage.html loaded ===');
-    console.log('previewFormSchema available:', !!previewFormSchema);
-    console.log('previewFormId from sessionStorage:', previewFormId);
-
-    if (!previewFormSchema) {
-        formContainer.innerHTML = '<div class="error-message"><i class="bi bi-exclamation-circle"></i> <strong>Error:</strong> No form schema found. Please open the form preview from the builder.</div>';
-    } else {
-        try {
-            const formSchema = JSON.parse(previewFormSchema);
-            console.log('📄 Loading form schema in preview page');
-            
-            // Use the formId from sessionStorage (set by launchForm)
-            if (previewFormId) {
-                console.log('✅ Using previewFormId from sessionStorage:', previewFormId);
-            } else if (formSchema._id) {
-                // Fallback to schema._id
-                previewFormId = formSchema._id;
-                sessionStorage.setItem('previewFormId', previewFormId);
-                console.log('✅ Using schema._id as previewFormId:', previewFormId);
-            } else {
-                console.warn('⚠️ FormId not found in sessionStorage or schema._id');
-            }
-            
-            // Ensure formSchema has required properties
-            if (!formSchema.components) {
-                formSchema.components = [];
-            }
-            if (!formSchema.display) {
-                formSchema.display = 'form';
-            }
-
-            // Load form using Formio
-            Formio.createForm(formContainer, formSchema)
-                .then(function(form) {
-                    console.log('✓ Form preview loaded successfully in page');
-                    console.log('FormBuilderApi available?', typeof FormBuilderApi !== 'undefined');
-                    console.log('📋 Final previewFormId:', previewFormId);
-
-                    // Store formId in sessionStorage for form submission handler
-                    if (previewFormId) {
-                        sessionStorage.setItem('previewFormId', previewFormId);
-                    }
-
-                    // Handle form submission
-                    form.on('submitForm', function(submission) {
-                        console.log('🔔 SUBMITFORM EVENT FIRED!', submission);
-                        handleFormSubmission(submission, form, formContainer);
-                    });
-
-                    // Also try alternative events
-                    form.on('submit', function(submission) {
-                        console.log('🔔 SUBMIT EVENT FIRED!', submission);
-                        handleFormSubmission(submission, form, formContainer);
-                    });
-
-                    // Also listen for form errors
-                    form.on('error', function(error) {
-                        console.error('Form error:', error);
-                    });
-                })
-                .catch(function(error) {
-                    console.error('Error loading form preview:', error);
-                    formContainer.innerHTML = '<div class="error-message"><i class="bi bi-exclamation-circle"></i> <strong>Error loading form:</strong> ' + error.message + '</div>';
-                });
-        } catch (error) {
-            console.error('Error parsing form schema:', error);
-            formContainer.innerHTML = '<div class="error-message"><i class="bi bi-exclamation-circle"></i> <strong>Error:</strong> Invalid form schema. ' + error.message + '</div>';
-        }
-    }
-</script>
+<script src="../js/preview.js"></script>
 
 </body>
 </html>
