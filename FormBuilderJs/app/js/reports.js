@@ -21,6 +21,16 @@ function escapeHtml(text) {
 
 // Initialize report page
 document.addEventListener('DOMContentLoaded', function() {
+    // Update heading with tenant name if present
+    var urlParams = new URLSearchParams(window.location.search);
+    var tenantName = urlParams.get('tenantName');
+    if (tenantName) {
+        var heading = document.getElementById('pageHeading');
+        if (heading) {
+            heading.innerHTML = 'Reports <span style="color: #6c757d;font-size:22px">' + decodeURIComponent(tenantName) + '</span>';
+        }
+    }
+
     // Load reports table when page loads
     FormBuilderApi.loadReportsTable();
 

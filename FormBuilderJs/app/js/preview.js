@@ -38,7 +38,7 @@ function initializePreview() {
 
     // Update title if viewing submission
     if (isViewingSubmission) {
-        previewTitle.textContent = 'Form Submission Viewer';
+        previewTitle.textContent = 'Form Submission Preview';
         closeViewerBtn.style.display = 'inline-block';
     }
 

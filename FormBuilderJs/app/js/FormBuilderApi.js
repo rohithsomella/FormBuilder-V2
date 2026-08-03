@@ -970,15 +970,33 @@ function displayPaginatedForms() {
      * Load and populate reports table (reuses forms pagination)
      */
     function loadReportsTable() {
-        getAllForms(
-            function(forms) {
-                populateReportsTable(forms);
-            },
-            function(error, statusCode) {
-                console.error('Failed to load forms for reports:', error);
-                showNoReportsMessage(error);
-            }
-        );
+        // Check if tenantId is present in URL parameters
+        var urlParams = new URLSearchParams(window.location.search);
+        var tenantId = urlParams.get('tenantId');
+        
+        // If tenantId exists, load only forms for that tenant; otherwise load all forms
+        if (tenantId) {
+            console.log('Loading reports for tenant ID:', tenantId);
+            getFormsByTenantId(tenantId,
+                function(forms) {
+                    populateReportsTable(forms);
+                },
+                function(error) {
+                    console.error('Failed to load forms for tenant reports:', error);
+                    showNoReportsMessage(error);
+                }
+            );
+        } else {
+            getAllForms(
+                function(forms) {
+                    populateReportsTable(forms);
+                },
+                function(error, statusCode) {
+                    console.error('Failed to load forms for reports:', error);
+                    showNoReportsMessage(error);
+                }
+            );
+        }
     }
 
     /**
