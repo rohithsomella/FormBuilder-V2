@@ -14,5 +14,11 @@ namespace FormBuilderAppService.Repositories.Interfaces
         
         Task<List<FormSubmission>> GetFormSubmissionsAsync(string formId);
         Task<FormSubmission?> GetFormSubmissionByIdAsync(string submissionId);
+
+        /// <summary>
+        /// Fetch several submissions in one round trip, in the order the ids were given.
+        /// Ids that do not exist are skipped.
+        /// </summary>
+        Task<List<FormSubmission>> GetFormSubmissionsByIdsAsync(IEnumerable<string> submissionIds);
     }
 }

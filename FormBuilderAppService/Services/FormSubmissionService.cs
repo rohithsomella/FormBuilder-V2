@@ -28,5 +28,10 @@ namespace FormBuilderAppService.Services
         {
             return await _formSubmissionRepository.GetFormSubmissionByIdAsync(submissionId);
         }
+
+        public async Task<List<FormSubmission>> GetFormSubmissionsByIdsAsync(IEnumerable<string> submissionIds)
+        {
+            return await _formSubmissionRepository.GetFormSubmissionsByIdsAsync(submissionIds);
+        }
     }
 }

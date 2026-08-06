@@ -12,6 +12,79 @@
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.3" />
     <PackageReference Include="Dapper" Version="2.1.79" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="7.1.0-preview1.26124.5" />
+    <PackageReference Include="Microsoft.Playwright" Version="1.61.0" />
   </ItemGroup>
+
+  <!--
+    PDF rendering assets.
+
+    Development: PdfRenderer:AssetsPath points straight at ../FormBuilderJs/dist, so a
+                 frontend rebuild is picked up with no copying at all.
+    Production : the assets are copied into wwwroot/pdf during publish and
+                 PdfRenderer:AssetsPath (appsettings.json) points at wwwroot/pdf/dist,
+                 so the published API never needs the frontend project.
+
+    Override the frontend location with:  dotnet publish -p:FormBuilderJsRoot=..\path\to\FormBuilderJs
+  -->
+  <PropertyGroup>
+    <FormBuilderJsRoot Condition="'$(FormBuilderJsRoot)' == ''">$(MSBuildProjectDirectory)\..\FormBuilderJs</FormBuilderJsRoot>
+  </PropertyGroup>
+
+  <Target Name="CopyPdfRenderAssets"
+          BeforeTargets="ComputeFilesToPublish"
+          Condition="Exists('$(FormBuilderJsRoot)\dist')">
+
+    <Message Importance="high" Text="Publishing PDF rendering assets from $(FormBuilderJsRoot)" />
+
+    <ItemGroup>
+      <!-- Frontend build output: formio bundles, stylesheets and fonts. -->
+      <PdfDistAsset Include="$(FormBuilderJsRoot)\dist\**\*.*" />
+
+      <!-- Application assets referenced by the render harness. -->
+      <PdfAppCssAsset Include="$(FormBuilderJsRoot)\app\css\**\*.*" />
+      <PdfAppVendorAsset Include="$(FormBuilderJsRoot)\app\vendor\**\*.*" />
+      <PdfAppJqueryAsset Include="$(FormBuilderJsRoot)\app\jquery\jquery.min.js" />
+      <PdfAppBootstrapAsset Include="$(FormBuilderJsRoot)\app\bootstrap\js\bootstrap.bundle.min.js" />
+      <PdfAppRootAsset Include="$(FormBuilderJsRoot)\app\styles.css;$(FormBuilderJsRoot)\app\main.css" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ResolvedFileToPublish Include="@(PdfDistAsset)">
+        <RelativePath>wwwroot\pdf\dist\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+
+      <ResolvedFileToPublish Include="@(PdfAppCssAsset)">
+        <RelativePath>wwwroot\pdf\app\css\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+
+      <ResolvedFileToPublish Include="@(PdfAppVendorAsset)">
+        <RelativePath>wwwroot\pdf\app\vendor\%(RecursiveDir)%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+
+      <ResolvedFileToPublish Include="@(PdfAppJqueryAsset)">
+        <RelativePath>wwwroot\pdf\app\jquery\%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+
+      <ResolvedFileToPublish Include="@(PdfAppBootstrapAsset)">
+        <RelativePath>wwwroot\pdf\app\bootstrap\js\%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+
+      <ResolvedFileToPublish Include="@(PdfAppRootAsset)">
+        <RelativePath>wwwroot\pdf\app\%(Filename)%(Extension)</RelativePath>
+        <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
+      </ResolvedFileToPublish>
+    </ItemGroup>
+  </Target>
+
+  <Target Name="WarnMissingPdfRenderAssets"
+          BeforeTargets="ComputeFilesToPublish"
+          Condition="!Exists('$(FormBuilderJsRoot)\dist')">
+    <Warning Text="FormBuilderJs\dist was not found at $(FormBuilderJsRoot). The published API will not be able to generate PDFs until wwwroot\pdf is populated." />
+  </Target>
 
 </Project>

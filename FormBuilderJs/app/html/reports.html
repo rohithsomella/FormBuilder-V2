@@ -22,6 +22,115 @@
         #submissionsTable tbody tr:hover {
             background-color: #e9ecef !important;
         }
+
+        /* ---- PDF job queue ribbons (bottom right, this page only) ---- */
+
+        #pdfJobQueue {
+            position: fixed;
+            right: 20px;
+            bottom: 20px;
+            z-index: 1080; /* above the report modal */
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            pointer-events: none; /* clicks pass through the empty container */
+        }
+
+        .pdf-job {
+            pointer-events: auto;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            min-width: 250px;
+            max-width: 340px;
+            padding: 9px 12px;
+            border-radius: 6px;
+            font-size: 13px;
+            line-height: 1.3;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, .12);
+            background: rgba(52, 152, 219, .14);
+            border: 1px solid rgba(52, 152, 219, .45);
+            color: #1b4f7a;
+            animation: pdf-job-in .22s ease-out;
+            transition: background-color .25s ease, border-color .25s ease, color .25s ease;
+        }
+
+        .pdf-job[data-state="done"] {
+            background: rgba(24, 188, 156, .16);
+            border-color: rgba(24, 188, 156, .55);
+            color: #0f6b5a;
+        }
+
+        .pdf-job[data-state="failed"] {
+            background: rgba(231, 76, 60, .14);
+            border-color: rgba(231, 76, 60, .55);
+            color: #a13226;
+        }
+
+        .pdf-job.pdf-job-leaving {
+            animation: pdf-job-out .25s ease-in forwards;
+        }
+
+        .pdf-job-icon {
+            font-size: 16px;
+            flex: 0 0 auto;
+        }
+
+        .pdf-job[data-state="running"] .pdf-job-icon {
+            animation: pdf-job-hourglass 1.6s ease-in-out infinite;
+        }
+
+        .pdf-job-body {
+            flex: 1 1 auto;
+            min-width: 0;
+        }
+
+        .pdf-job-title {
+            font-weight: 600;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-job-meta {
+            opacity: .85;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .pdf-job-close {
+            flex: 0 0 auto;
+            border: 0;
+            background: transparent;
+            color: inherit;
+            opacity: .6;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0 2px;
+            cursor: pointer;
+        }
+
+        .pdf-job-close:hover {
+            opacity: 1;
+        }
+
+        @keyframes pdf-job-hourglass {
+            0%, 35%   { transform: rotate(0deg); }
+            50%, 85%  { transform: rotate(180deg); }
+            100%      { transform: rotate(360deg); }
+        }
+
+        @keyframes pdf-job-in {
+            from { opacity: 0; transform: translateX(24px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+
+        @keyframes pdf-job-out {
+            from { opacity: 1; transform: translateX(0); }
+            to   { opacity: 0; transform: translateX(24px); }
+        }
     </style>
 
 </head>
@@ -126,10 +235,16 @@
                 <button type="button" class="btn btn-primary" id="exportCsvBtn">
                     <i class="bi bi-download"></i> Export CSV
                 </button>
+                <button type="button" class="btn btn-primary" id="downloadPdfBtn">
+                    <i class="bi bi-file-pdf"></i> Download as PDF
+                </button>
             </div>
         </div>
     </div>
 </div>
+
+<!-- PDF generation queue - one ribbon per background job -->
+<div id="pdfJobQueue" aria-live="polite" aria-atomic="false"></div>
 
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>

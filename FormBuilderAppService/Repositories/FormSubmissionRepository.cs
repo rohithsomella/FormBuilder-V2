@@ -216,6 +216,46 @@ namespace FormBuilderAppService.Repositories
             }
         }
 
+        public async Task<List<FormSubmission>> GetFormSubmissionsByIdsAsync(IEnumerable<string> submissionIds)
+        {
+            try
+            {
+                var ids = (submissionIds ?? Enumerable.Empty<string>())
+                    .Where(id => !string.IsNullOrWhiteSpace(id))
+                    .Select(id => id.Trim())
+                    .Distinct(StringComparer.Ordinal)
+                    .ToList();
+
+                if (ids.Count == 0)
+                {
+                    _logger.LogWarning("GetFormSubmissionsByIds called without any usable ids");
+                    return new List<FormSubmission>();
+                }
+
+                var filter = Builders<FormSubmission>.Filter.In(fs => fs.Id, ids);
+                var submissions = await _formSubmissions.Find(filter).ToListAsync();
+
+                // Preserve the caller's order - it drives the page order in generated PDFs.
+                var byId = submissions
+                    .Where(s => s.Id != null)
+                    .ToDictionary(s => s.Id!, StringComparer.Ordinal);
+
+                var ordered = ids
+                    .Where(byId.ContainsKey)
+                    .Select(id => byId[id])
+                    .ToList();
+
+                _logger.LogInformation("✅ Fetched {Found} of {Requested} requested submissions", ordered.Count, ids.Count);
+
+                return ordered;
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "❌ Error retrieving submissions by ids");
+                throw;
+            }
+        }
+
         /// <summary>
         /// Convert BsonValue to a JSON-serializable object
         /// </summary>

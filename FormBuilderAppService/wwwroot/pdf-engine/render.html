@@ -1,0 +1,1060 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Form.io PDF Render Harness</title>
+
+    <!--
+        Self contained render harness for the .NET PDF engine.
+
+        It mirrors app/html/previewPage.html so the PDF matches the Preview page, and every
+        asset is served by the engine's request interceptor (ChromiumPdfEngine.cs):
+            /app/*    -> PdfRenderer:AppAssetsPath   (FormBuilderJs/app)
+            /dist/*   -> PdfRenderer:AssetsPath      (FormBuilderJs/dist, rebuilt by the frontend build)
+            /engine/* -> PdfRenderer:EnginePath      (this folder)
+        Nothing is fetched from the internet, so rendering works on an offline server.
+    -->
+    <link rel="stylesheet" href="/app/vendor/bootswatch-flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="/dist/{{FORMIO_STYLESHEET}}">
+    <link rel="stylesheet" href="/app/vendor/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="/app/css/Formio_Template.css">
+    <link rel="stylesheet" href="/app/styles.css">
+
+    <style>
+        /*
+         * Print styles. Declared after the Preview page stylesheets so they can neutralise
+         * the app-shell rules in app/styles.css (which put the body into a 100vh grid)
+         * without touching any Form.io or Bootstrap styling.
+         *
+         * There is deliberately no @page rule: Chromium's PrintToPDF owns the paper size and
+         * margins (PdfPageOptions), and a CSS @page margin would fight the header/footer.
+         */
+
+        /* ------------------------------------------------------------------ page shell */
+
+        html,
+        body.pdf-body {
+            display: block !important;
+            width: 100% !important;
+            height: auto !important;
+            min-height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            overflow: visible !important;
+            background: #ffffff !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+        }
+
+        .pdf-documents {
+            width: 100%;
+        }
+
+        /* ----------------------------------------------------------- document sections */
+
+        .pdf-document {
+            width: 100%;
+            padding: 0 0 4px 0;
+            box-sizing: border-box;
+            break-after: page;
+            page-break-after: always;
+        }
+
+        .pdf-document.pdf-document-last {
+            break-after: auto;
+            page-break-after: auto;
+        }
+
+        .pdf-document-header {
+            margin-bottom: 18px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+            break-after: avoid;
+            page-break-after: avoid;
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        .pdf-document-title {
+            margin: 0;
+            font-size: 20px;
+            font-weight: 600;
+            color: #333333;
+            letter-spacing: 0;
+        }
+
+        .pdf-document-meta {
+            margin-top: 6px;
+            font-size: 11px;
+            color: #6c757d;
+        }
+
+        .pdf-document-meta .pdf-meta-item {
+            margin-right: 16px;
+            white-space: nowrap;
+        }
+
+        .pdf-render-error {
+            padding: 15px;
+            border-radius: 4px;
+            background-color: #f8d7da;
+            border: 1px solid #f5c6cb;
+            color: #721c24;
+        }
+
+        /* --------------------------------------------------------------- page breaking */
+
+        /* Components that fit on one page are kept whole (measured in applyPageBreakRules). */
+        .pdf-keep-together {
+            break-inside: avoid !important;
+            page-break-inside: avoid !important;
+        }
+
+        /* Components taller than a page flow naturally (large Data Grids / Tables). */
+        .pdf-allow-break {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+        }
+
+        /* Never strand a heading or a panel/table header at the foot of a page. */
+        h1, h2, h3, h4, h5, h6,
+        .card-header,
+        .panel-heading,
+        legend,
+        .formio-component label,
+        thead {
+            break-after: avoid;
+            page-break-after: avoid;
+        }
+
+        thead {
+            display: table-header-group;
+        }
+
+        tfoot {
+            display: table-footer-group;
+        }
+
+        tr,
+        .signature-pad,
+        .formio-component-signature,
+        .signature-pad-body,
+        img {
+            break-inside: avoid;
+            page-break-inside: avoid;
+        }
+
+        /* ----------------------------------------------------------- Form.io adjustments */
+
+        .formio-pdf-content .formio-form,
+        .formio-pdf-content .formio-component {
+            width: 100%;
+            max-width: 100%;
+        }
+
+        /* Action buttons never belong in a printed submission. */
+        .formio-pdf-content .formio-component-button,
+        .formio-pdf-content .formio-component-submit,
+        .formio-pdf-content button[type="submit"],
+        .formio-pdf-content .btn-wizard-nav-next,
+        .formio-pdf-content .btn-wizard-nav-previous,
+        .formio-pdf-content .btn-wizard-nav-cancel,
+        .formio-pdf-content .formio-errors,
+        .formio-pdf-content .alert-danger,
+        .formio-pdf-content [ref="buttonMessageContainer"],
+        .formio-pdf-content .formio-component-tooltip,
+        .formio-pdf-content .component-edit-container {
+            display: none !important;
+        }
+
+        /* Disabled read-only controls must print as normal, high-contrast text. */
+        .formio-pdf-content input,
+        .formio-pdf-content textarea,
+        .formio-pdf-content select,
+        .formio-pdf-content .form-control,
+        .formio-pdf-content .choices__inner {
+            color: #212529 !important;
+            background-color: #ffffff !important;
+            opacity: 1 !important;
+            -webkit-text-fill-color: #212529 !important;
+        }
+
+        .formio-pdf-content input[disabled],
+        .formio-pdf-content textarea[disabled],
+        .formio-pdf-content select[disabled],
+        .formio-pdf-content .form-control[disabled],
+        .formio-pdf-content .form-control:disabled {
+            background-color: #ffffff !important;
+            border-color: #ced4da !important;
+        }
+
+        /* Textareas must grow instead of scrolling so no content is clipped. */
+        .formio-pdf-content textarea {
+            height: auto !important;
+            min-height: 38px;
+            overflow: visible !important;
+            resize: none !important;
+        }
+
+        .pdf-flattened-value {
+            display: block;
+            min-height: 38px;
+            white-space: pre-wrap;
+            word-break: break-word;
+            height: auto !important;
+        }
+
+        /* Collapsible content is expanded by the script below - keep it visible. */
+        .formio-pdf-content .collapse,
+        .formio-pdf-content .collapsing,
+        .formio-pdf-content .card-body,
+        .formio-pdf-content .panel-body {
+            display: block !important;
+            height: auto !important;
+            visibility: visible !important;
+            overflow: visible !important;
+        }
+
+        /* Grids and tables keep their borders and stay inside the printable width. */
+        .formio-pdf-content table {
+            width: 100% !important;
+            max-width: 100% !important;
+            border-collapse: collapse;
+        }
+
+        .formio-pdf-content .table-responsive {
+            overflow: visible !important;
+        }
+
+        /* Images and signatures scale down instead of overflowing the page. */
+        .formio-pdf-content img,
+        .formio-pdf-content canvas,
+        .formio-pdf-content .signature-pad-canvas {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+
+        /* Anything Form.io hid conditionally stays hidden, exactly like the Preview page. */
+        .formio-pdf-content .formio-hidden,
+        .formio-pdf-content [ref="component"][hidden] {
+            display: none !important;
+        }
+
+        /* ------------------------------------------------- PDF Tab Section Styling */
+
+        /* Reduce tab title size by 30% (from h4 default 1.25rem to 0.875rem) */
+        .pdf-tab-section .card-title {
+            font-size: 0.875rem;
+        }
+    </style>
+</head>
+<body class="pdf-body">
+
+<div id="pdfDocuments" class="pdf-documents"></div>
+
+<script src="/app/jquery/jquery.min.js"></script>
+<script src="/app/bootstrap/js/bootstrap.bundle.min.js"></script>
+<script src="/dist/{{FORMIO_SCRIPT}}"></script>
+
+<script>
+/**
+ * Form.io Tabs flattener - isolated extension of the PDF renderer.
+ *
+ * A printed page has no tabs, and Form.io only shows the active one (the other panes are
+ * in the DOM with an inline `display: none`). This module rewrites every Tabs component
+ * into the tabs' contents laid out one after another, in order, so the PDF contains all of
+ * them. Everything around a Tabs component keeps its original position.
+ *
+ *     Tabs (4)                 Tab 1 content
+ *         Tab 1                Tab 2 content   <- page break if it does not fit
+ *         Tab 2        ->      Tab 3 content
+ *         Tab 3                Tab 4 content
+ *         Tab 4
+ *
+ * The markup produced per tab mirrors Form.io's own flat tab template
+ * (src/templates/bootstrap/tab/flat.ejs), so no new styling is needed.
+ *
+ * Nothing here runs when a form has no Tabs component - flatten() returns immediately and
+ * the rendering pipeline behaves exactly as it did before.
+ */
+(function (global) {
+    'use strict';
+
+    var TABS_SELECTOR = '.formio-component-tabs';
+    var PANEL_SELECTOR = '.formio-component-panel';
+
+    var DEFAULTS = {
+        // 'auto'   - a tab moves to the next page only when it does not fit (page break rules
+        //            are applied later by the renderer, which measures every .card)
+        // 'always' - every tab after the first starts on a new page
+        pageBreak: 'auto',
+        showTabTitles: true,
+        settleDelayMs: 150
+    };
+
+    function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    /**
+     * Wait for the next painted frame, but never block on it: requestAnimationFrame does
+     * not fire in a hidden or background page, so a timeout always releases the wait.
+     */
+    function nextFrame() {
+        return new Promise(function (resolve) {
+            var settled = false;
+            var finish = function () {
+                if (!settled) {
+                    settled = true;
+                    resolve();
+                }
+            };
+
+            try {
+                requestAnimationFrame(function () { requestAnimationFrame(finish); });
+            } catch (e) {
+                finish();
+            }
+
+            setTimeout(finish, 50);
+        });
+    }
+
+    function toArray(nodeList) {
+        return Array.prototype.slice.call(nodeList);
+    }
+
+    function depthOf(element) {
+        var depth = 0;
+        while (element.parentElement) {
+            depth++;
+            element = element.parentElement;
+        }
+        return depth;
+    }
+
+    /**
+     * Every Tabs component under root, deepest first so nested Tabs are flattened into
+     * static markup before their parent is cloned.
+     */
+    function collectTabsElements(root) {
+        return toArray(root.querySelectorAll(TABS_SELECTOR)).sort(function (a, b) {
+            return depthOf(b) - depthOf(a);
+        });
+    }
+
+    /** The Form.io component instance that owns this element, when it can be resolved. */
+    function findTabsComponent(form, element) {
+        var found = null;
+        if (form && typeof form.everyComponent === 'function') {
+            form.everyComponent(function (comp) {
+                if (!found && comp && comp.component &&
+                    comp.component.type === 'tabs' && comp.element === element) {
+                    found = comp;
+                }
+            });
+        }
+        return found;
+    }
+
+    /** Direct tab panes of this Tabs component (never a nested component's panes). */
+    function getPanes(element) {
+        return toArray(element.querySelectorAll('[role="tabpanel"], .formio-tab-panel'))
+            .filter(function (pane) { return pane.closest(TABS_SELECTOR) === element; });
+    }
+
+    function getLinks(element) {
+        return toArray(element.querySelectorAll('.nav-tabs .nav-link, .nav-tabs a'))
+            .filter(function (link) { return link.closest(TABS_SELECTOR) === element; });
+    }
+
+    function getTabLabel(comp, links, index) {
+        var schema = comp && comp.component && comp.component.components;
+        if (schema && schema[index] && schema[index].label) {
+            return schema[index].label;
+        }
+        if (links[index] && links[index].textContent.trim()) {
+            return links[index].textContent.trim();
+        }
+        return 'Tab ' + (index + 1);
+    }
+
+    /**
+     * Activate a tab the way a user would, then let Form.io finish rendering it.
+     */
+    async function activateTab(comp, element, index, settleDelayMs) {
+        var links = getLinks(element);
+
+        if (comp && typeof comp.setTab === 'function') {
+            comp.setTab(index);
+        } else if (links[index]) {
+            links[index].click();
+        } else {
+            // Last resort for a custom tab template: drive the inline display directly.
+            getPanes(element).forEach(function (pane, paneIndex) {
+                pane.style.display = paneIndex === index ? 'block' : 'none';
+            });
+        }
+
+        await nextFrame();
+        await delay(settleDelayMs);
+    }
+
+    /**
+     * cloneNode copies attributes, not the live value/checked properties Form.io sets, so
+     * the current state is written back into the markup before the pane is cloned.
+     */
+    function captureControlState(scope) {
+        toArray(scope.querySelectorAll('input, textarea, select')).forEach(function (el) {
+            try {
+                if (el.tagName === 'SELECT') {
+                    toArray(el.options).forEach(function (option) {
+                        if (option.selected) {
+                            option.setAttribute('selected', 'selected');
+                        } else {
+                            option.removeAttribute('selected');
+                        }
+                    });
+                } else if (el.tagName === 'TEXTAREA') {
+                    el.textContent = el.value;
+                } else if (el.type === 'checkbox' || el.type === 'radio') {
+                    if (el.checked) {
+                        el.setAttribute('checked', 'checked');
+                    } else {
+                        el.removeAttribute('checked');
+                    }
+                } else {
+                    el.setAttribute('value', el.value == null ? '' : el.value);
+                }
+            } catch (e) {
+                // A control that rejects the attribute is not worth failing the PDF for.
+            }
+        });
+    }
+
+    /** A cloned canvas starts blank, so its bitmap is copied across. */
+    function copyCanvasContent(source, clone) {
+        var originals = source.querySelectorAll('canvas');
+        var copies = clone.querySelectorAll('canvas');
+
+        for (var i = 0; i < originals.length && i < copies.length; i++) {
+            try {
+                if (!originals[i].width || !originals[i].height) {
+                    continue;
+                }
+                copies[i].width = originals[i].width;
+                copies[i].height = originals[i].height;
+                copies[i].getContext('2d').drawImage(originals[i], 0, 0);
+            } catch (e) {
+                // Tainted or unsupported canvas - leave the clone as it is.
+            }
+        }
+    }
+
+    /** True when the pane still holds a collapsed panel (Form.io omits its body entirely). */
+    function hasCollapsedPanel(pane) {
+        return toArray(pane.querySelectorAll(PANEL_SELECTOR)).some(function (panel) {
+            return !panel.querySelector('.card-body, .panel-body');
+        });
+    }
+
+    /**
+     * Wrap one tab's content the way Form.io's own flat tab template does, so the flattened
+     * output needs no extra styling.
+     */
+    function buildTabCard(label, paneClone, settings, isFirst) {
+        var card = document.createElement('div');
+        card.className = 'mb-2 card border pdf-tab-section';
+
+        if (settings.pageBreak === 'always' && !isFirst) {
+            card.style.breakBefore = 'page';
+            card.style.pageBreakBefore = 'always';
+        }
+
+        if (settings.showTabTitles) {
+            var header = document.createElement('div');
+            header.className = 'card-header bg-default';
+            var title = document.createElement('h4');
+            title.className = 'mb-0 card-title';
+            title.textContent = label;
+            header.appendChild(title);
+            card.appendChild(header);
+        }
+
+        // The pane already carries Form.io's "card-body" class; only the tab specific
+        // classes and the inline display toggle have to go.
+        paneClone.classList.remove('tab-pane', 'formio-tab-panel', 'formio-tab-panel-active', 'active');
+        paneClone.removeAttribute('role');
+        paneClone.removeAttribute('ref');
+        paneClone.style.display = '';
+        if (!paneClone.classList.contains('card-body')) {
+            paneClone.classList.add('card-body');
+        }
+
+        card.appendChild(paneClone);
+        return card;
+    }
+
+    /**
+     * Flatten every Tabs component under root.
+     *
+     * @param {Element}  root     Container holding the rendered form
+     * @param {Object}   form     The Form.io form instance (used to drive setTab)
+     * @param {Object}   options  { pageBreak, showTabTitles, settleDelayMs, expandCollapsed }
+     * @returns {Object} { tabsFlattened, tabsRendered, errors }
+     */
+    async function flatten(root, form, options) {
+        var settings = Object.assign({}, DEFAULTS, options || {});
+        var result = { tabsFlattened: 0, tabsRendered: 0, errors: [] };
+
+        if (!root) {
+            return result;
+        }
+
+        var tabsElements = collectTabsElements(root);
+        if (!tabsElements.length) {
+            // No Tabs component: leave the rendering pipeline untouched.
+            return result;
+        }
+
+        for (var t = 0; t < tabsElements.length; t++) {
+            var tabsElement = tabsElements[t];
+
+            // A nested Tabs component may already have been absorbed into a parent's clone.
+            if (!tabsElement.parentNode) {
+                continue;
+            }
+
+            try {
+                var comp = findTabsComponent(form, tabsElement);
+                var paneCount = getPanes(tabsElement).length;
+
+                if (!paneCount) {
+                    continue;
+                }
+
+                var flattenedTabs = document.createElement('div');
+                flattenedTabs.className = 'pdf-tabs-flattened';
+
+                for (var i = 0; i < paneCount; i++) {
+                    await activateTab(comp, tabsElement, i, settings.settleDelayMs);
+
+                    // Re-read after activation: Form.io may have re-rendered the pane.
+                    var pane = getPanes(tabsElement)[i];
+                    if (!pane) {
+                        continue;
+                    }
+
+                    // A panel collapsed inside this tab has no body in the DOM, so there
+                    // would be nothing to clone. Re-run the renderer's own expansion pass
+                    // now that the tab is visible.
+                    if (typeof settings.expandCollapsed === 'function' && hasCollapsedPanel(pane)) {
+                        await settings.expandCollapsed();
+                        await delay(settings.settleDelayMs);
+                        pane = getPanes(tabsElement)[i] || pane;
+                    }
+
+                    captureControlState(pane);
+
+                    var paneClone = pane.cloneNode(true);
+                    copyCanvasContent(pane, paneClone);
+
+                    var label = getTabLabel(comp, getLinks(tabsElement), i);
+                    flattenedTabs.appendChild(buildTabCard(label, paneClone, settings, i === 0));
+                    result.tabsRendered++;
+                }
+
+                tabsElement.parentNode.replaceChild(flattenedTabs, tabsElement);
+                result.tabsFlattened++;
+            } catch (e) {
+                result.errors.push('tabs:' + (e && e.message ? e.message : e));
+            }
+        }
+
+        return result;
+    }
+
+    global.FormPdfTabs = {
+        flatten: flatten,
+        hasTabs: function (root) { return !!(root && root.querySelector(TABS_SELECTOR)); },
+        version: '1.0.0'
+    };
+})(window);
+</script>
+
+<script>
+/**
+ * Form.io PDF renderer.
+ *
+ * The .NET engine navigates here, waits for window.FormPdfRenderer, then calls
+ * window.FormPdfRenderer.render(payloadJson) and waits for the returned promise before
+ * calling Chromium's PrintToPDF.
+ *
+ * Schema normalisation and submission extraction intentionally mirror app/js/preview.js so
+ * the PDF matches the Preview page.
+ */
+(function (global) {
+    'use strict';
+
+    var DEFAULT_OPTIONS = {
+        expandCollapsible: true,
+        showDocumentTitle: true,
+        showSubmissionMeta: true,
+        applyPageBreakRules: true,
+        flattenInputs: false,
+        usablePageHeightPx: 970,
+        settleDelayMs: 400,
+        assetTimeoutMs: 15000,
+        // Tabs flattening (see the FormPdfTabs module above)
+        tabPageBreak: 'auto',
+        showTabTitles: true
+    };
+
+    var diagnostics = { documents: 0, expanded: 0, tabs: 0, tabSections: 0, errors: [] };
+
+    function delay(ms) {
+        return new Promise(function (resolve) { setTimeout(resolve, ms); });
+    }
+
+    function escapeHtml(text) {
+        return String(text == null ? '' : text)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+    }
+
+    /**
+     * Normalise a form schema coming from /api/forms/{id}.
+     * Mirrors initializePreview() in app/js/preview.js.
+     */
+    function normalizeSchema(rawSchema) {
+        var formSchema = rawSchema;
+
+        if (typeof formSchema === 'string') {
+            formSchema = JSON.parse(formSchema);
+        }
+
+        // Some callers wrap the schema in a "form" property.
+        if (formSchema && formSchema.form && typeof formSchema.form === 'object') {
+            formSchema = formSchema.form;
+        }
+
+        // The .NET backend stores components as a JSON string on FormDto.
+        if (formSchema.components && typeof formSchema.components === 'string') {
+            try {
+                formSchema.components = JSON.parse(formSchema.components);
+            } catch (e) {
+                formSchema.components = [];
+            }
+        }
+
+        if (!formSchema.components) {
+            formSchema.components = [];
+        } else if (!Array.isArray(formSchema.components)) {
+            formSchema.components = typeof formSchema.components === 'object'
+                ? Object.values(formSchema.components)
+                : [];
+        }
+
+        formSchema.components = formSchema.components.filter(function (comp) {
+            if (!comp || typeof comp !== 'object') {
+                return false;
+            }
+            if (!comp.type) {
+                if (comp.input) {
+                    comp.type = 'textfield';
+                    return true;
+                }
+                return false;
+            }
+            return true;
+        });
+
+        if (!formSchema.display) {
+            formSchema.display = 'form';
+        }
+
+        return formSchema;
+    }
+
+    /**
+     * Pull the form answers out of a submission document.
+     * Mirrors the submission handling in app/js/preview.js.
+     */
+    function extractSubmission(rawSubmission) {
+        if (!rawSubmission) {
+            return null;
+        }
+
+        var parsed = rawSubmission;
+        if (typeof parsed === 'string') {
+            try {
+                parsed = JSON.parse(parsed);
+            } catch (e) {
+                return null;
+            }
+        }
+
+        if (parsed.data) {
+            return { data: parsed.data };
+        }
+        if (parsed.submissionData) {
+            return { data: parsed.submissionData };
+        }
+        if (parsed.formData) {
+            return { data: parsed.formData };
+        }
+        return { data: parsed };
+    }
+
+    function buildDocumentShell(doc, options, index, total) {
+        var section = document.createElement('section');
+        section.className = 'pdf-document';
+        section.setAttribute('data-document-index', String(index));
+        if (index === total - 1) {
+            section.classList.add('pdf-document-last');
+        }
+
+        if (options.showDocumentTitle) {
+            var header = document.createElement('header');
+            header.className = 'pdf-document-header';
+
+            var metaBits = [];
+            if (options.showSubmissionMeta && doc.meta) {
+                if (doc.meta.submissionId) {
+                    metaBits.push('<span class="pdf-meta-item"><strong>Submission ID:</strong> ' +
+                        escapeHtml(doc.meta.submissionId) + '</span>');
+                }
+                if (doc.meta.submittedOn) {
+                    metaBits.push('<span class="pdf-meta-item"><strong>Submitted:</strong> ' +
+                        escapeHtml(doc.meta.submittedOn) + '</span>');
+                }
+                if (doc.meta.version) {
+                    metaBits.push('<span class="pdf-meta-item"><strong>Version:</strong> ' +
+                        escapeHtml(doc.meta.version) + '</span>');
+                }
+            }
+
+            header.innerHTML =
+                '<h2 class="pdf-document-title">' + escapeHtml(doc.title || 'Form Submission') + '</h2>' +
+                (metaBits.length ? '<div class="pdf-document-meta">' + metaBits.join('') + '</div>' : '');
+            section.appendChild(header);
+        }
+
+        var body = document.createElement('div');
+        body.className = 'pdf-document-body formio-pdf-content';
+        section.appendChild(body);
+
+        return { section: section, body: body };
+    }
+
+    function isHidden(el) {
+        if (!el) {
+            return false;
+        }
+        var style = window.getComputedStyle(el);
+        return style.display === 'none' ||
+            style.visibility === 'hidden' ||
+            (el.offsetHeight === 0 && el.offsetWidth === 0);
+    }
+
+    /**
+     * Expand every collapsible container so the PDF contains all content.
+     * Runs several passes because expanding a panel can reveal nested panels.
+     */
+    async function expandCollapsibles(form) {
+        var expanded = 0;
+
+        for (var pass = 0; pass < 4; pass++) {
+            var changed = false;
+
+            // Pass A - Form.io component state (the authoritative source).
+            if (form && typeof form.everyComponent === 'function') {
+                var pending = [];
+                form.everyComponent(function (comp) {
+                    if (!comp || !comp.component) {
+                        return;
+                    }
+                    var schema = comp.component;
+                    if (comp.collapsed === true || schema.collapsed === true) {
+                        schema.collapsed = false;
+                        try {
+                            comp.collapsed = false;
+                        } catch (e) {
+                            diagnostics.errors.push('collapse:' + (schema.key || schema.type) + ':' + e.message);
+                        }
+                        pending.push(comp);
+                        expanded++;
+                        changed = true;
+                    }
+                });
+
+                for (var i = 0; i < pending.length; i++) {
+                    try {
+                        if (typeof pending[i].redraw === 'function') {
+                            await pending[i].redraw();
+                        }
+                    } catch (e) {
+                        diagnostics.errors.push('redraw:' + e.message);
+                    }
+                }
+            }
+
+            // Pass B - native <details> and Bootstrap collapse containers Form.io does not
+            // own (HTML components, custom accordions).
+            document.querySelectorAll('details:not([open])').forEach(function (el) {
+                el.open = true;
+                expanded++;
+                changed = true;
+            });
+
+            document.querySelectorAll('.collapse:not(.show)').forEach(function (el) {
+                el.classList.add('show');
+                el.classList.remove('collapsing');
+                el.style.height = '';
+                expanded++;
+                changed = true;
+            });
+
+            document.querySelectorAll('[aria-expanded="false"]').forEach(function (el) {
+                el.setAttribute('aria-expanded', 'true');
+                changed = true;
+            });
+
+            // Pass C - custom accordions that only react to a click on their header. Only
+            // clicked while the body is still hidden, so open panels are never toggled shut.
+            document.querySelectorAll(
+                '.formio-component-panel .card-header, .formio-component-panel .panel-heading, .formio-collapse-icon'
+            ).forEach(function (header) {
+                var card = header.closest('.card, .panel, .formio-component-panel');
+                if (!card) {
+                    return;
+                }
+                var body = card.querySelector('.card-body, .panel-body');
+                if (body && isHidden(body)) {
+                    try {
+                        header.click();
+                        expanded++;
+                        changed = true;
+                    } catch (e) {
+                        diagnostics.errors.push('click:' + e.message);
+                    }
+                }
+            });
+
+            if (!changed) {
+                break;
+            }
+            await delay(120);
+        }
+
+        // Final safety net: reveal anything still hidden by an inline style.
+        document.querySelectorAll('.card-body, .panel-body, .formio-component-panel > div').forEach(function (el) {
+            if (el.style && (el.style.display === 'none' || el.style.height === '0px')) {
+                el.style.display = '';
+                el.style.height = '';
+            }
+        });
+
+        diagnostics.expanded += expanded;
+        return expanded;
+    }
+
+    /**
+     * Keep components whole across page breaks. Anything taller than a printable page is
+     * allowed to flow naturally (large Data Grids / Tables).
+     */
+    function applyPageBreakRules(root, usablePageHeightPx) {
+        var threshold = Math.max(200, usablePageHeightPx * 0.9);
+        var selector = [
+            '.formio-component',
+            '.formio-component-panel',
+            '.formio-component-fieldset',
+            '.formio-component-well',
+            '.formio-component-container',
+            '.formio-component-datagrid',
+            '.formio-component-editgrid',
+            '.formio-component-table',
+            '.formio-component-signature',
+            '.card',
+            'fieldset',
+            'table',
+            '.signature-pad',
+            '.list-group-item'
+        ].join(',');
+
+        root.querySelectorAll(selector).forEach(function (el) {
+            var height = el.getBoundingClientRect().height;
+            if (height > 0 && height <= threshold) {
+                el.classList.add('pdf-keep-together');
+            } else {
+                el.classList.add('pdf-allow-break');
+            }
+        });
+    }
+
+    /**
+     * Replace form controls with plain text. Off by default - the disabled controls already
+     * print as real, selectable text.
+     */
+    function flattenInputs(root) {
+        root.querySelectorAll('input, textarea, select').forEach(function (el) {
+            if (el.type === 'checkbox' || el.type === 'radio') {
+                return;
+            }
+
+            var value = el.tagName === 'SELECT'
+                ? Array.from(el.selectedOptions || []).map(function (o) { return o.text; }).join(', ')
+                : el.value;
+
+            var span = document.createElement('span');
+            span.className = 'pdf-flattened-value form-control';
+            span.textContent = value;
+            el.parentNode.replaceChild(span, el);
+        });
+    }
+
+    function waitForImages(root, timeoutMs) {
+        var pending = Array.from(root.querySelectorAll('img')).filter(function (img) {
+            return !img.complete || img.naturalWidth === 0;
+        });
+
+        if (!pending.length) {
+            return Promise.resolve();
+        }
+
+        return Promise.race([
+            Promise.all(pending.map(function (img) {
+                return new Promise(function (resolve) {
+                    img.addEventListener('load', resolve, { once: true });
+                    img.addEventListener('error', resolve, { once: true });
+                });
+            })),
+            delay(timeoutMs)
+        ]);
+    }
+
+    function waitForFonts(timeoutMs) {
+        if (!document.fonts || !document.fonts.ready) {
+            return Promise.resolve();
+        }
+        return Promise.race([document.fonts.ready, delay(timeoutMs)]);
+    }
+
+    /**
+     * Hand the rendered form to the isolated Tabs flattener (FormPdfTabs, defined above)
+     * so every tab is printed instead of only the active one. Returns straight away when
+     * the form has no Tabs component, leaving the pipeline exactly as it was.
+     */
+    async function flattenTabs(form, container, options) {
+        if (!global.FormPdfTabs || !global.FormPdfTabs.hasTabs(container)) {
+            return;
+        }
+
+        var result = await global.FormPdfTabs.flatten(container, form, {
+            pageBreak: options.tabPageBreak,
+            showTabTitles: options.showTabTitles,
+            settleDelayMs: Math.min(options.settleDelayMs, 200),
+            // Reuses the renderer's own expansion pass - panels collapsed inside a tab have
+            // no body in the DOM until they are expanded.
+            expandCollapsed: function () { return expandCollapsibles(form); }
+        });
+
+        diagnostics.tabs += result.tabsFlattened;
+        diagnostics.tabSections += result.tabsRendered;
+        result.errors.forEach(function (error) { diagnostics.errors.push(error); });
+    }
+
+    /** Render a single form + submission into the given container. */
+    async function renderDocument(doc, container, options) {
+        var schema = normalizeSchema(doc.formSchema);
+        var submission = extractSubmission(doc.submission);
+
+        // readOnly mirrors "view submission" mode on the Preview page.
+        var form = await Formio.createForm(container, schema, {
+            readOnly: !!submission,
+            noAlerts: true,
+            sanitize: true,
+            language: doc.language || 'en'
+        });
+
+        if (submission) {
+            form.submission = submission;
+        }
+
+        if (form.ready) {
+            await form.ready;
+        }
+
+        await delay(options.settleDelayMs);
+
+        if (options.expandCollapsible) {
+            await expandCollapsibles(form);
+        }
+
+        // Flatten Form.io Tabs (no-op when the form has none).
+        await flattenTabs(form, container, options);
+
+        return form;
+    }
+
+    /**
+     * Entry point invoked by the .NET PDF engine.
+     * @param {String|Object} payload JSON describing the documents to render.
+     */
+    async function render(payload) {
+        var data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        var options = Object.assign({}, DEFAULT_OPTIONS, data.options || {});
+        var documents = data.documents || [];
+        var host = document.getElementById('pdfDocuments');
+
+        host.innerHTML = '';
+        diagnostics = { documents: 0, expanded: 0, tabs: 0, tabSections: 0, errors: [] };
+
+        if (typeof Formio === 'undefined') {
+            throw new Error('formio.full.js was not loaded - check PdfRenderer:AssetsPath');
+        }
+
+        for (var i = 0; i < documents.length; i++) {
+            var doc = documents[i];
+            var shell = buildDocumentShell(doc, options, i, documents.length);
+            host.appendChild(shell.section);
+
+            try {
+                await renderDocument(doc, shell.body, options);
+                diagnostics.documents++;
+            } catch (e) {
+                diagnostics.errors.push('document[' + i + ']:' + (e && e.message ? e.message : e));
+                shell.body.innerHTML = '<div class="pdf-render-error">Unable to render this submission: ' +
+                    escapeHtml(e && e.message ? e.message : String(e)) + '</div>';
+            }
+        }
+
+        await waitForImages(host, options.assetTimeoutMs);
+        await waitForFonts(options.assetTimeoutMs);
+        await delay(options.settleDelayMs);
+
+        if (options.flattenInputs) {
+            flattenInputs(host);
+        }
+
+        if (options.applyPageBreakRules) {
+            applyPageBreakRules(host, options.usablePageHeightPx);
+        }
+
+        // Let layout settle after the class changes above.
+        await delay(80);
+        document.body.classList.add('pdf-render-complete');
+
+        return diagnostics;
+    }
+
+    global.FormPdfRenderer = {
+        render: render,
+        diagnostics: function () { return diagnostics; },
+        version: '1.0.0'
+    };
+})(window);
+</script>
+
+</body>
+</html>

@@ -72,6 +72,25 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    // Handle Download as PDF button
+    var downloadPdfBtn = document.getElementById('downloadPdfBtn');
+    if (downloadPdfBtn) {
+        downloadPdfBtn.addEventListener('click', function() {
+            var reportModal = document.getElementById('reportModal');
+            if (reportModal && reportModal.submissionsData) {
+                var selectedSubmissions = getSelectedSubmissions();
+
+                // Requirement Check: Alert if no report is selected
+                if (selectedSubmissions.length === 0) {
+                    alert('Select one report');
+                    return;
+                }
+
+                downloadPdf(selectedSubmissions);
+            }
+        });
+    }
+
     // Reset checkboxes when modal closes
     $('#reportModal').on('hidden.bs.modal', function() {
         document.getElementById('selectAllCheckbox').checked = false;
@@ -556,6 +575,206 @@ function exportToCsv(submissions, formName) {
     var link = document.createElement('a');
     link.href = url;
     link.download = (formName || 'report') + '_' + new Date().getTime() + '.csv';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+}
+
+/**
+ * Background PDF job queue.
+ *
+ * Each generation request runs in the background and is tracked by its own ribbon at the
+ * bottom right of the Reports page: transparent blue with an hourglass and a live elapsed
+ * timer while it runs, green when the file downloads, red when it fails. Ribbons stack, so
+ * the user can keep selecting rows and queueing more PDFs without waiting.
+ *
+ * Scoped to this page - the container lives in reports.html, so no other page shows them.
+ */
+var PdfJobQueue = (function() {
+    'use strict';
+
+    var SUCCESS_HIDE_MS = 2500;
+    var FAILURE_HIDE_MS = 4000;
+
+    var activeJobs = [];   // jobs still running, for the shared elapsed-time ticker
+    var ticker = null;
+
+    /**
+     * Format elapsed milliseconds as m:ss
+     */
+    function formatElapsed(ms) {
+        var totalSeconds = Math.floor(ms / 1000);
+        var minutes = Math.floor(totalSeconds / 60);
+        var seconds = totalSeconds % 60;
+        return minutes + ':' + (seconds < 10 ? '0' : '') + seconds;
+    }
+
+    /**
+     * One interval drives every running ribbon rather than one timer per job
+     */
+    function startTicker() {
+        if (ticker) {
+            return;
+        }
+        ticker = setInterval(function() {
+            activeJobs.forEach(function(job) {
+                job.metaEl.textContent = job.subtitle + ' · ' + formatElapsed(Date.now() - job.startedAt);
+            });
+            if (activeJobs.length === 0) {
+                clearInterval(ticker);
+                ticker = null;
+            }
+        }, 1000);
+    }
+
+    function removeRibbon(job) {
+        if (job.removed) {
+            return;
+        }
+        job.removed = true;
+        job.element.classList.add('pdf-job-leaving');
+        setTimeout(function() {
+            if (job.element.parentNode) {
+                job.element.parentNode.removeChild(job.element);
+            }
+        }, 250);
+    }
+
+    function finish(job, state, icon, title, meta, hideAfterMs) {
+        var index = activeJobs.indexOf(job);
+        if (index !== -1) {
+            activeJobs.splice(index, 1);
+        }
+
+        job.element.setAttribute('data-state', state);
+        job.iconEl.className = 'bi ' + icon + ' pdf-job-icon';
+        job.titleEl.textContent = title;
+        job.metaEl.textContent = meta;
+        job.closeEl.style.display = 'block';
+
+        job.hideTimer = setTimeout(function() { removeRibbon(job); }, hideAfterMs);
+    }
+
+    /**
+     * Add a ribbon and start tracking a job
+     * @param {String} title - Form name
+     * @param {String} subtitle - e.g. "3 submissions"
+     * @returns {Object} handle with succeed(fileName) and fail(message)
+     */
+    function add(title, subtitle) {
+        var container = document.getElementById('pdfJobQueue');
+        if (!container) {
+            return { succeed: function() {}, fail: function(m) { alert('Error: ' + m); } };
+        }
+
+        var element = document.createElement('div');
+        element.className = 'pdf-job';
+        element.setAttribute('data-state', 'running');
+        element.innerHTML =
+            '<i class="bi bi-hourglass-split pdf-job-icon"></i>' +
+            '<div class="pdf-job-body">' +
+                '<div class="pdf-job-title"></div>' +
+                '<div class="pdf-job-meta"></div>' +
+            '</div>' +
+            '<button type="button" class="pdf-job-close" title="Dismiss" style="display:none;">&times;</button>';
+
+        var job = {
+            element: element,
+            iconEl: element.querySelector('.pdf-job-icon'),
+            titleEl: element.querySelector('.pdf-job-title'),
+            metaEl: element.querySelector('.pdf-job-meta'),
+            closeEl: element.querySelector('.pdf-job-close'),
+            subtitle: subtitle,
+            startedAt: Date.now(),
+            removed: false,
+            hideTimer: null
+        };
+
+        // textContent, not innerHTML - form names are user supplied
+        job.titleEl.textContent = title;
+        job.metaEl.textContent = subtitle + ' · 0:00';
+
+        job.closeEl.addEventListener('click', function() {
+            clearTimeout(job.hideTimer);
+            removeRibbon(job);
+        });
+
+        container.appendChild(element);
+        activeJobs.push(job);
+        startTicker();
+
+        return {
+            succeed: function(fileName) {
+                finish(job, 'done', 'bi-check-circle-fill', title,
+                    'Downloaded · ' + formatElapsed(Date.now() - job.startedAt), SUCCESS_HIDE_MS);
+                job.titleEl.title = fileName || '';
+            },
+            fail: function(message) {
+                finish(job, 'failed', 'bi-exclamation-triangle-fill', title + ' — failed',
+                    message || 'PDF generation failed', FAILURE_HIDE_MS);
+            }
+        };
+    }
+
+    return { add: add };
+})();
+
+/**
+ * Download submissions as PDF.
+ *
+ * Queues the request and returns immediately - the button stays clickable so more PDFs can
+ * be started while earlier ones are still rendering. Progress is shown by a ribbon per job.
+ *
+ * @param {Array} submissions - Array of selected submission objects
+ */
+function downloadPdf(submissions) {
+    if (!submissions || submissions.length === 0) {
+        alert('No data to download');
+        return;
+    }
+
+    // Extract submission IDs from selected submissions
+    var submissionIds = submissions.map(function(submission) {
+        return submission.submissionId || submission.id || submission._id;
+    }).filter(function(id) {
+        return id !== null && id !== undefined;
+    });
+
+    if (submissionIds.length === 0) {
+        alert('No valid submission IDs found');
+        return;
+    }
+
+    var reportModal = document.getElementById('reportModal');
+    var formName = (reportModal && reportModal.formName) || 'Form';
+    var countLabel = submissionIds.length === 1
+        ? '1 submission'
+        : submissionIds.length + ' submissions';
+
+    var job = PdfJobQueue.add(formName, countLabel);
+
+    FormBuilderApi.generateSubmissionsPdf(submissionIds,
+        function(blob, fileName) {
+            savePdfBlob(blob, fileName);
+            job.succeed(fileName);
+        },
+        function(error) {
+            job.fail(error);
+        }
+    );
+}
+
+/**
+ * Save a generated PDF to disk
+ * @param {Blob} blob - The generated PDF
+ * @param {String} fileName - File name suggested by the backend
+ */
+function savePdfBlob(blob, fileName) {
+    var url = URL.createObjectURL(blob);
+    var link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'form-submissions.pdf';
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);

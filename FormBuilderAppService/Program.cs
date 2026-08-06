@@ -1,4 +1,5 @@
 using FormBuilderAppService.Data;
+using FormBuilderAppService.Pdf;
 using FormBuilderAppService.Repositories;
 using FormBuilderAppService.Repositories.Interfaces;
 using FormBuilderAppService.Services;
@@ -32,7 +33,10 @@ builder.Services.AddCors(options =>
     {
         builder.AllowAnyOrigin()
                .AllowAnyMethod()
-               .AllowAnyHeader();
+               .AllowAnyHeader()
+               // Let the browser read the generated PDF's file name.
+               .WithExposedHeaders("Content-Disposition", "X-Pdf-Filename", "X-Pdf-Document-Count",
+                                   "X-Pdf-Request-Id", "Retry-After");
     });
 });
 
@@ -57,6 +61,9 @@ builder.Services.AddScoped<IResourceRepository, ResourceRepository>();
 builder.Services.AddScoped<IResourceService, ResourceService>();
 builder.Services.AddScoped<ITenantRepository, TenantRepository>();
 builder.Services.AddScoped<ITenantService, TenantService>();
+
+// Reusable PDF generation module (Playwright + headless Chromium)
+builder.Services.AddPdfRenderer(builder.Configuration);
 
 var app = builder.Build();
 

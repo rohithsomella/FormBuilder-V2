@@ -1253,6 +1253,95 @@ function displayPaginatedForms() {
     }
 
     /**
+     * Generate a PDF for one or more submissions.
+     * The whole document is rendered by the backend (Playwright + headless Chromium),
+     * so the PDF matches the Preview page and the text stays selectable/searchable.
+     * @param {Array} submissionIds - Submission IDs to render, in page order
+     * @param {Function} onSuccess - Called with (blob, fileName)
+     * @param {Function} onError - Called with (message, statusCode)
+     * @param {Object} options - Optional overrides (page, headerFooter, fileName, ...)
+     */
+    function generateSubmissionsPdf(submissionIds, onSuccess, onError, options) {
+        if (!submissionIds || !submissionIds.length) {
+            console.error('At least one submission ID is required');
+            if (onError) {
+                onError('At least one submission ID is required', 400);
+            }
+            return;
+        }
+
+        var pdfUrl = config.baseUrl.replace('/api/forms', '/api/pdf') + '/form-submissions';
+        var payload = $.extend({ submissionIds: submissionIds }, options || {});
+
+        console.log('Requesting PDF from:', pdfUrl, payload);
+
+        // jQuery's jqXHR wrapper does not expose .response, which is where the error body
+        // lives when responseType is 'blob' (jqXHR.responseText is the string
+        // "[object Blob]"). Keep a handle on the real XMLHttpRequest to read it back.
+        var nativeXhr = null;
+
+        $.ajax({
+            url: pdfUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            data: JSON.stringify(payload),
+            xhr: function () {
+                nativeXhr = new window.XMLHttpRequest();
+                return nativeXhr;
+            },
+            xhrFields: { responseType: 'blob' },
+            success: function (blob, status, xhr) {
+                var fileName = xhr.getResponseHeader('X-Pdf-Filename') || 'form-submissions.pdf';
+                console.log('PDF generated:', fileName, blob.size + ' bytes');
+                if (onSuccess) {
+                    onSuccess(blob, fileName);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error generating PDF:', error, xhr.status);
+
+                var errorMessage = 'Error generating PDF';
+                if (xhr.status === 0) {
+                    errorMessage = 'Network error: cannot reach the API at ' + pdfUrl;
+                } else if (xhr.status === 404) {
+                    errorMessage = 'The selected submission(s) could not be found.';
+                }
+
+                function report(message) {
+                    if (onError) {
+                        onError(message, xhr.status);
+                    }
+                }
+
+                // The API reports failures as JSON, but responseType is 'blob', so the body
+                // arrives as a Blob on the native xhr and has to be read back as text.
+                var body = nativeXhr && nativeXhr.response;
+                if (body instanceof Blob && body.size > 0) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        try {
+                            var parsed = JSON.parse(reader.result);
+                            // The API reports its own failures as { message }; ASP.NET's model
+                            // validation replies with ProblemDetails, where the text is in title.
+                            if (parsed && (parsed.message || parsed.title)) {
+                                errorMessage = parsed.message || parsed.title;
+                            }
+                        } catch (e) {
+                            // Not JSON - keep the generic message.
+                        }
+                        report(errorMessage);
+                    };
+                    reader.onerror = function () { report(errorMessage); };
+                    reader.readAsText(body);
+                    return;
+                }
+
+                report(errorMessage);
+            }
+        });
+    }
+
+    /**
      * Generate report for a form - wrapper that delegates to reports.js
      * @param {String} formId - The form ID
      */
@@ -1432,6 +1521,7 @@ function displayPaginatedForms() {
         deleteForm: deleteForm,
         generateReport: generateReport,
         getFormSubmissions: getFormSubmissions,
+        generateSubmissionsPdf: generateSubmissionsPdf,
         previousPage: previousPage,
         nextPage: nextPage,
         submitFormData: submitFormData,
