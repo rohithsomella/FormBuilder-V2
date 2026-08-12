@@ -14,6 +14,13 @@ var FormBuilderApi = (function() {
         contentType: 'application/json'
     };
 
+    function clearPreviewSessionStorage() {
+        sessionStorage.removeItem('submissionData');
+        sessionStorage.removeItem('previewFormId');
+        sessionStorage.removeItem('previewFormSchema');
+        console.log('✅ Cleared preview session storage keys');
+    }
+
 
     //  get tenants
     function getTenants(onSuccess, onError) {
@@ -643,9 +650,8 @@ var FormBuilderApi = (function() {
     function launchForm(formId) {
         console.log('Launch form:', formId);
         
-        // Clear any submission data from previous submission viewer
-        sessionStorage.removeItem('submissionData');
-        console.log('✅ Cleared submission data from sessionStorage');
+        // Clear any old preview/submission state before launching preview.
+        clearPreviewSessionStorage();
         
         if (!formId) {
             alert('Form ID is required');
@@ -880,6 +886,10 @@ function displayPaginatedForms() {
 
                 '<button class="btn btn-sm btn-info" title="Preview form" onclick="FormBuilderApi.launchForm(\'' + form.id + '\')">' +
                     '<i class="bi bi-box-arrow-up-right"></i>' +
+                '</button> ' +
+
+                '<button class="btn btn-sm btn-outline-danger" title="Download fillable AcroForm PDF" onclick="FormBuilderApi.downloadAcroFormPdf(\'' + form.id + '\', this)">' +
+                    '<i class="bi bi-file-earmark-pdf"></i>' +
                 '</button> ' +
 
                 '<button class="btn btn-sm btn-danger" title="Delete form" onclick="FormBuilderApi.deleteForm(\'' + form.id + '\')">' +
@@ -1342,6 +1352,150 @@ function displayPaginatedForms() {
     }
 
     /**
+     * Generate a fillable AcroForm PDF for a form definition.
+     *
+     * The backend renders the same document the read-only PDF produces (Playwright +
+     * headless Chromium + the Preview page stylesheets) and then lays a real, editable PDF
+     * form field over every control, so the file looks exactly like the Preview page but can
+     * be filled in and saved in Adobe Reader.
+     *
+     * @param {String} formId - The form to render
+     * @param {Function} onSuccess - Called with (blob, fileName)
+     * @param {Function} onError - Called with (message, statusCode)
+     * @param {Object} options - Optional overrides (page, headerFooter, fileName, ...)
+     */
+    function generateAcroFormPdf(formId, onSuccess, onError, options) {
+        if (!formId) {
+            console.error('A form ID is required');
+            if (onError) {
+                onError('A form ID is required', 400);
+            }
+            return;
+        }
+
+        var pdfUrl = config.baseUrl.replace('/api/forms', '/api/pdf') + '/acroform';
+        var payload = $.extend({ formId: formId }, options || {});
+
+        console.log('Requesting AcroForm PDF from:', pdfUrl, payload);
+
+        // jQuery's jqXHR wrapper does not expose .response, which is where the error body
+        // lives when responseType is 'blob'. Keep a handle on the real XMLHttpRequest.
+        var nativeXhr = null;
+
+        $.ajax({
+            url: pdfUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            data: JSON.stringify(payload),
+            xhr: function () {
+                nativeXhr = new window.XMLHttpRequest();
+                return nativeXhr;
+            },
+            xhrFields: { responseType: 'blob' },
+            success: function (blob, status, xhr) {
+                var fileName = xhr.getResponseHeader('X-Pdf-Filename') || 'form.pdf';
+                console.log('AcroForm PDF generated:', fileName, blob.size + ' bytes');
+                if (onSuccess) {
+                    onSuccess(blob, fileName);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error generating AcroForm PDF:', error, xhr.status);
+
+                var errorMessage = 'Error generating the AcroForm PDF';
+                if (xhr.status === 0) {
+                    errorMessage = 'Network error: cannot reach the API at ' + pdfUrl;
+                } else if (xhr.status === 404) {
+                    errorMessage = 'The form could not be found.';
+                } else if (xhr.status === 503) {
+                    errorMessage = 'The PDF service is busy. Please try again shortly.';
+                }
+
+                function report(message) {
+                    if (onError) {
+                        onError(message, xhr.status);
+                    }
+                }
+
+                // The API reports failures as JSON, but responseType is 'blob', so the body
+                // arrives as a Blob on the native xhr and has to be read back as text.
+                var body = nativeXhr && nativeXhr.response;
+                if (body instanceof Blob && body.size > 0) {
+                    var reader = new FileReader();
+                    reader.onload = function () {
+                        try {
+                            var parsed = JSON.parse(reader.result);
+                            if (parsed && (parsed.message || parsed.title)) {
+                                errorMessage = parsed.message || parsed.title;
+                            }
+                        } catch (e) {
+                            // Not JSON - keep the generic message.
+                        }
+                        report(errorMessage);
+                    };
+                    reader.onerror = function () { report(errorMessage); };
+                    reader.readAsText(body);
+                    return;
+                }
+
+                report(errorMessage);
+            }
+        });
+    }
+
+    /**
+     * Forms table action: download the form as a fillable AcroForm PDF.
+     *
+     * Rendering takes a few seconds, so the button shows a spinner and is disabled until the
+     * file is saved - a second click would queue another full render.
+     *
+     * @param {String} formId - The form to download
+     * @param {Element} button - The clicked button, used for the busy state
+     */
+    function downloadAcroFormPdf(formId, button) {
+        var originalHtml = button ? button.innerHTML : null;
+
+        function restore() {
+            if (button) {
+                button.innerHTML = originalHtml;
+                button.disabled = false;
+            }
+        }
+
+        if (button) {
+            button.disabled = true;
+            button.innerHTML = '<i class="bi bi-hourglass-split"></i>';
+        }
+
+        generateAcroFormPdf(formId,
+            function (blob, fileName) {
+                saveBlobAsFile(blob, fileName || 'form.pdf');
+                restore();
+            },
+            function (message) {
+                restore();
+                alert(message);
+            }
+        );
+    }
+
+    /**
+     * Save a generated file to disk through a temporary object URL.
+     * @param {Blob} blob - The file contents
+     * @param {String} fileName - Name suggested by the backend
+     */
+    function saveBlobAsFile(blob, fileName) {
+        var url = URL.createObjectURL(blob);
+        var link = document.createElement('a');
+        link.href = url;
+        link.download = fileName;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+    }
+
+    /**
      * Generate report for a form - wrapper that delegates to reports.js
      * @param {String} formId - The form ID
      */
@@ -1522,6 +1676,8 @@ function displayPaginatedForms() {
         generateReport: generateReport,
         getFormSubmissions: getFormSubmissions,
         generateSubmissionsPdf: generateSubmissionsPdf,
+        generateAcroFormPdf: generateAcroFormPdf,
+        downloadAcroFormPdf: downloadAcroFormPdf,
         previousPage: previousPage,
         nextPage: nextPage,
         submitFormData: submitFormData,

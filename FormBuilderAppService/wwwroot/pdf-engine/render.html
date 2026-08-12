@@ -246,6 +246,124 @@
         .pdf-tab-section .card-title {
             font-size: 0.875rem;
         }
+
+        /* -------------------------------------------- AcroForm (fillable PDF) mode */
+
+        /*
+         * The AcroForm document renders the *editable* form (readOnly: false) so every
+         * control prints with the same box the Preview page shows, and the post processor
+         * then lays a transparent PDF form field exactly on top of it. Only the controls a
+         * PDF reader could never operate are hidden here - everything else is untouched, so
+         * the page still looks identical to the read-only PDF.
+         */
+        body.pdf-acroform .formio-pdf-content .formio-button-add-row,
+        body.pdf-acroform .formio-pdf-content .formio-button-remove-row,
+        body.pdf-acroform .formio-pdf-content [ref="datagrid-addRow"],
+        body.pdf-acroform .formio-pdf-content [ref="removeRow"],
+        body.pdf-acroform .formio-pdf-content .editgrid-table-column-operations,
+        body.pdf-acroform .formio-pdf-content .editgrid-actions,
+        body.pdf-acroform .formio-pdf-content .signature-pad-refresh {
+            display: none !important;
+        }
+
+        /*
+         * ...and the cells those buttons lived in. A Data Grid carries an extra "Add/Remove"
+         * column plus an "Add Another" footer row; hiding only the button leaves the cell
+         * behind, which prints as an empty column wedged against the table's right border and
+         * an empty striped strip under the last row. Dropping the whole cell lets the real
+         * columns fill the table, so it ends where its content ends.
+         */
+        body.pdf-acroform .formio-pdf-content .datagrid-table > thead > tr > th:has(.sr-only),
+        body.pdf-acroform .formio-pdf-content .datagrid-table > tbody > tr > td:has(.formio-button-remove-row),
+        body.pdf-acroform .formio-pdf-content .datagrid-table > tbody > tr > td:has(.formio-drag-button),
+        body.pdf-acroform .formio-pdf-content .datagrid-table > tfoot {
+            display: none !important;
+        }
+
+
+        /*
+         * Dropdown chrome. A reader draws its own arrow on a combobox field, so the one
+         * Form.io prints is a second arrow on the same box. The clear (x) button goes with it
+         * - there is nothing for it to clear on a printed form.
+         */
+        body.pdf-acroform .formio-pdf-content .choices[data-type*="select-one"]::after,
+        body.pdf-acroform .formio-pdf-content .choices__button {
+            display: none !important;
+        }
+
+        body.pdf-acroform .formio-pdf-content select {
+            -webkit-appearance: none !important;
+            appearance: none !important;
+            background-image: none !important;
+        }
+
+        /* An enabled control must print with the same flat box a disabled one does. */
+        body.pdf-acroform .formio-pdf-content input,
+        body.pdf-acroform .formio-pdf-content textarea,
+        body.pdf-acroform .formio-pdf-content select,
+        body.pdf-acroform .formio-pdf-content .choices__inner {
+            box-shadow: none !important;
+            outline: none !important;
+        }
+
+        /*
+         * Page breaks in AcroForm mode are decided by the harness itself: paginate() measures
+         * every block and forces a break before any block that would cross a page boundary,
+         * then remembers the document offset each printed page starts at. That bookkeeping is
+         * what puts the form fields on the right page, so Chromium must not move anything
+         * afterwards - every "avoid" rule that fires shifts content the harness has already
+         * placed, and a repeated table header occupies space on paper that does not exist in
+         * the DOM. The rules below are the print heuristics declared further up; they stay
+         * exactly as they are for the read-only submission PDF.
+         */
+        body.pdf-acroform .pdf-keep-together,
+        body.pdf-acroform .pdf-allow-break,
+        body.pdf-acroform h1,
+        body.pdf-acroform h2,
+        body.pdf-acroform h3,
+        body.pdf-acroform h4,
+        body.pdf-acroform h5,
+        body.pdf-acroform h6,
+        body.pdf-acroform .card-header,
+        body.pdf-acroform .panel-heading,
+        body.pdf-acroform legend,
+        body.pdf-acroform .formio-component label,
+        body.pdf-acroform thead,
+        body.pdf-acroform tr,
+        body.pdf-acroform img,
+        body.pdf-acroform .signature-pad,
+        body.pdf-acroform .formio-component-signature,
+        body.pdf-acroform .signature-pad-body {
+            break-inside: auto !important;
+            page-break-inside: auto !important;
+            break-after: auto !important;
+            page-break-after: auto !important;
+        }
+
+        /* A repeated header row would push every following row down the printed page. */
+        body.pdf-acroform thead {
+            display: table-row-group !important;
+        }
+
+        /* Chromium may pull lines onto the next page to satisfy these; the harness cannot see it. */
+        body.pdf-acroform .formio-pdf-content * {
+            orphans: 1;
+            widows: 1;
+        }
+
+        /*
+         * Zero-height marker the harness inserts to start a new page (see prepareForcedBreak).
+         * It must take up no room at all, or the page would start below where it was recorded.
+         */
+        .pdf-page-break {
+            display: block !important;
+            height: 0 !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: 0 !important;
+            break-after: page !important;
+            page-break-after: always !important;
+        }
     </style>
 </head>
 <body class="pdf-body">
@@ -600,7 +718,6 @@
         expandCollapsible: true,
         showDocumentTitle: true,
         showSubmissionMeta: true,
-        applyPageBreakRules: true,
         flattenInputs: false,
         usablePageHeightPx: 970,
         settleDelayMs: 400,
@@ -1051,6 +1168,1164 @@
     global.FormPdfRenderer = {
         render: render,
         diagnostics: function () { return diagnostics; },
+        version: '1.0.0',
+
+        /*
+         * Building blocks reused by the AcroForm renderer below. Sharing them is what keeps
+         * the fillable PDF byte-for-byte the same document as the read-only one: same schema
+         * normalisation, same expansion, same tab flattening, same page break rules.
+         */
+        internals: {
+            delay: delay,
+            normalizeSchema: normalizeSchema,
+            buildDocumentShell: buildDocumentShell,
+            expandCollapsibles: expandCollapsibles,
+            flattenTabs: flattenTabs,
+            applyPageBreakRules: applyPageBreakRules,
+            waitForImages: waitForImages,
+            waitForFonts: waitForFonts
+        }
+    };
+})(window);
+</script>
+
+<script>
+/**
+ * AcroForm renderer - turns a form definition into a *fillable* PDF.
+ *
+ * The document is produced by the very same pipeline as the read-only submission PDF
+ * (FormPdfRenderer above), so it looks identical to the Preview page. The difference is
+ * what happens on either side of Chromium's PrintToPDF:
+ *
+ *   render(payload)   renders the blank, editable form, forces the page breaks itself so it
+ *                     knows exactly where every printed page starts, and records the
+ *                     position of every control in PDF points.
+ *   ...engine prints...
+ *   apply(base64Pdf)  loads the printed bytes with pdf-lib and drops a *transparent* PDF form
+ *                     field onto each recorded position, then returns the new bytes.
+ *
+ * Because the widgets carry no border and no background, what the reader sees is still the
+ * box Chromium printed - the AcroForm field only makes it typeable.
+ *
+ * Pagination is the one thing that cannot be guessed: CSS fragmentation does not move DOM
+ * boxes, so getBoundingClientRect() always reports offsets in one continuous strip. The
+ * renderer therefore decides the breaks itself (`break-before: page` on the first block of
+ * every page) and remembers each break's document offset - which is, by definition, the
+ * offset printed at the top of that page.
+ */
+(function (global) {
+    'use strict';
+
+    /** 72pt per 96px. Chromium's `scale` multiplies on top of it. */
+    var PT_PER_PX = 0.75;
+
+    var DEFAULTS = {
+        expandCollapsible: true,
+        showDocumentTitle: true,
+        applyPageBreakRules: true,
+        tabPageBreak: 'auto',
+        showTabTitles: true,
+        transparentFields: true,
+        settleDelayMs: 400,
+        assetTimeoutMs: 15000,
+        pageHeightPx: 970,
+        pageBreakSafetyPx: 12,
+        scale: 1,
+        marginLeftPt: 28.35,
+        marginTopPt: 34.02,
+        pdfLibUrl: '/app/vendor/pdf-lib/pdf-lib.min.js'
+    };
+
+    /**
+     * Displays whose children stack down the page, so `break-before: page` on a child really
+     * does start a new page there.
+     *
+     * A column flex container counts too - it fragments exactly like a block, and Bootstrap's
+     * .card is one, which is what every panel and every flattened tab section is built from.
+     * Row flex and grid containers do not: a break on an item that sits beside its siblings
+     * means nothing, so such a container is treated as one indivisible block.
+     */
+    var FLOW_CONTAINERS = {
+        'block': true, 'flow-root': true, 'list-item': true,
+        'table': true, 'table-row-group': true, 'table-header-group': true,
+        'table-footer-group': true, 'table-row': true, 'table-cell': true
+    };
+
+    /**
+     * Settle a forced break so the printed page starts exactly where the harness says it
+     * does, and return that document offset.
+     *
+     * Two things sit between the last block printed on the previous page and this one:
+     *
+     *  - Margins. A margin next to a fragmentation break is supposed to be truncated, but
+     *    Chromium prints it in some nestings and drops it in others. Rather than guess, every
+     *    margin along the way is removed - which is also what a page break should look like,
+     *    with the content flush against the top margin of the sheet.
+     *  - The border and padding of any ancestor this block opens. Those are drawn, so they
+     *    appear as space above the block at the top of the new page and the page therefore
+     *    starts that much higher than the block's own rectangle.
+     */
+    function prepareForcedBreak(element, root) {
+        // Break *after* a zero-height marker rather than before the block itself. The marker
+        // is then the last thing on the page that is ending, so the next page starts exactly
+        // at the marker's own offset - whatever Chromium decides to do with the margin
+        // between the marker and the block, and whatever ancestor borders or padding the
+        // block opens, all of it is printed after that point and measured with it.
+        //
+        // Table rows are the exception: a <div> cannot live between them, so those keep the
+        // plain break-before. Nothing sits above a row inside its section, so the row's own
+        // top edge is the page start.
+        if (canHoldBreakMarker(element.parentElement)) {
+            var marker = document.createElement('div');
+            marker.className = 'pdf-page-break';
+            element.parentElement.insertBefore(marker, element);
+            return marker.getBoundingClientRect().top + scrollTop() - state.docTop;
+        }
+
+        element.style.breakBefore = 'page';
+        element.style.pageBreakBefore = 'always';
+        return element.getBoundingClientRect().top + scrollTop() - state.docTop;
+    }
+
+    function canHoldBreakMarker(parent) {
+        if (!parent) {
+            return false;
+        }
+        var display = window.getComputedStyle(parent).display;
+        return display.indexOf('table') !== 0;
+    }
+
+    /** The block printed immediately before this one, skipping anything out of flow. */
+    function previousInFlowSibling(element) {
+        var node = element.previousElementSibling;
+        while (node) {
+            var style = window.getComputedStyle(node);
+            if (style.display !== 'none' &&
+                style.position !== 'absolute' &&
+                style.position !== 'fixed' &&
+                node.getBoundingClientRect().height > 0) {
+                return node;
+            }
+            node = node.previousElementSibling;
+        }
+        return null;
+    }
+
+    function canBreakBetweenChildrenOf(element) {
+        var style = window.getComputedStyle(element);
+        if (FLOW_CONTAINERS[style.display]) {
+            return true;
+        }
+        return (style.display === 'flex' || style.display === 'inline-flex') &&
+            /^column/.test(style.flexDirection || '');
+    }
+
+    /** Input types that become a single line PDF text field. */
+    var TEXT_INPUT_TYPES = {
+        'text': true, 'email': true, 'tel': true, 'url': true, 'number': true,
+        'password': true, 'search': true, 'date': true, 'time': true,
+        'datetime-local': true, 'month': true, 'week': true, 'color': true, '': true
+    };
+
+    /** Input types that never become a field. */
+    var IGNORED_INPUT_TYPES = {
+        'hidden': true, 'submit': true, 'button': true, 'reset': true,
+        'image': true, 'file': true, 'range': true
+    };
+
+    var state = emptyState();
+    var pdfLibPromise = null;
+
+    function emptyState() {
+        return { options: null, pages: [{ startY: 0 }], fields: [], warnings: [], docTop: 0, docLeft: 0 };
+    }
+
+    function toArray(list) {
+        return Array.prototype.slice.call(list);
+    }
+
+    function scrollTop() {
+        return window.scrollY || window.pageYOffset || 0;
+    }
+
+    function scrollLeft() {
+        return window.scrollX || window.pageXOffset || 0;
+    }
+
+    // =================================================================== render (pre print)
+
+    /**
+     * Entry point invoked by AcroFormContentSource.PrepareAsync.
+     * @param {String|Object} payload JSON describing the form to render.
+     */
+    async function render(payload) {
+        var data = typeof payload === 'string' ? JSON.parse(payload) : payload;
+        var options = Object.assign({}, DEFAULTS, data.options || {});
+        var doc = data.document || {};
+
+        var R = global.FormPdfRenderer && global.FormPdfRenderer.internals;
+        if (!R) {
+            throw new Error('FormPdfRenderer internals are unavailable - render.html is incomplete');
+        }
+        if (typeof Formio === 'undefined') {
+            throw new Error('formio.full.js was not loaded - check PdfRenderer:AssetsPath');
+        }
+
+        state = emptyState();
+        state.options = options;
+
+        var host = document.getElementById('pdfDocuments');
+        host.innerHTML = '';
+        document.body.classList.remove('pdf-render-complete');
+        document.body.classList.add('pdf-acroform');
+
+        neutraliseCssPageSize();
+
+        var shell = R.buildDocumentShell(
+            { title: doc.title, meta: null },
+            { showDocumentTitle: options.showDocumentTitle, showSubmissionMeta: false },
+            0, 1);
+        host.appendChild(shell.section);
+
+        // readOnly: false - an empty, enabled form, which is exactly what the Preview page
+        // shows before anything is filled in.
+        var form = await Formio.createForm(shell.body, R.normalizeSchema(doc.formSchema), {
+            readOnly: false,
+            noAlerts: true,
+            sanitize: true,
+            language: doc.language || 'en'
+        });
+
+        if (form.ready) {
+            await form.ready;
+        }
+        await R.delay(options.settleDelayMs);
+
+        if (options.expandCollapsible) {
+            await R.expandCollapsibles(form);
+        }
+
+        // Flatten Form.io Tabs (no-op when the form has none).
+        await R.flattenTabs(form, shell.body, options);
+
+        await R.waitForImages(host, options.assetTimeoutMs);
+        await R.waitForFonts(options.assetTimeoutMs);
+        await R.delay(options.settleDelayMs);
+
+        // Empty the form out. Done last, just before it is measured, so anything Form.io
+        // fills in while it settles is cleared too.
+        blankTheForm(shell.body);
+
+        // applyPageBreakRules() is deliberately not called here: its break-inside rules are
+        // Chromium's own heuristics, and paginate() below replaces them with breaks it can
+        // account for. The AcroForm stylesheet switches the equivalent static rules off.
+        await R.delay(80);
+
+        // Pin the measured vertical layout before anything is recorded from it.
+        freezeHeights(host);
+
+        state.docTop = host.getBoundingClientRect().top + scrollTop();
+        state.docLeft = host.getBoundingClientRect().left + scrollLeft();
+        state.pages = paginate(host, options);
+        state.fields = collectFields(host, options);
+
+        await R.delay(50);
+        document.body.classList.add('pdf-render-complete');
+
+        return {
+            documents: 1,
+            pages: state.pages.length,
+            fields: state.fields.length,
+            layoutWidthPx: document.documentElement.clientWidth,
+            contentWidthPx: Math.max(
+                document.documentElement.scrollWidth,
+                document.body.scrollWidth,
+                host.scrollWidth),
+            errors: state.warnings
+        };
+    }
+
+    /**
+     * Bootstrap 4's print stylesheet contains `@media print { @page { size: a3 } }`.
+     *
+     * PrintToPDF still puts an A4 sheet in the tray, so Chromium lays the document out on an
+     * A3 page and then shrinks the result onto A4 - everything comes out at exactly
+     * 1/sqrt(2) (70.7%) of the requested scale, and the printed margins shrink with it.
+     * Nothing about that is predictable from the DOM, and the injected form fields would sit
+     * about 30% away from the controls they belong to.
+     *
+     * Declaring `size: auto` last hands the paper size back to PrintToPDF, so one CSS pixel
+     * becomes exactly 0.75 * scale points and the page margins are the ones that were asked
+     * for. Injected from here rather than written into the stylesheet above so the read-only
+     * submission PDF keeps rendering exactly as it always has.
+     */
+    function neutraliseCssPageSize() {
+        if (document.getElementById('pdf-acroform-page-size')) {
+            return;
+        }
+        var style = document.createElement('style');
+        style.id = 'pdf-acroform-page-size';
+        // No margin here on purpose - PrintToPDF owns the margins (PdfPageOptions).
+        style.textContent = '@page { size: auto; }';
+        document.head.appendChild(style);
+    }
+
+    /** Date and time controls Form.io fills in with "now" unless the schema says otherwise. */
+    var DATED_CONTROLS = [
+        '.formio-component-datetime input',
+        '.formio-component-day input',
+        '.formio-component-time input',
+        'input[type="date"]',
+        'input[type="datetime-local"]',
+        'input[type="time"]',
+        'input[type="month"]',
+        'input[type="week"]'
+    ].join(',');
+
+    /**
+     * Print the form empty.
+     *
+     * The AcroForm PDF is a *blank* form, but Form.io renders a datetime component
+     * pre-filled with the current date and paints placeholder text into empty inputs and
+     * selects. Neither belongs on paper: the widgets are transparent now, so a printed date
+     * stays visible behind whatever the reader types, and a printed "Choose..." sits behind
+     * their answer.
+     *
+     * Clearing the DOM is enough - nothing here is ever submitted, and the page is measured
+     * afterwards, so the geometry matches what is printed.
+     */
+    function blankTheForm(root) {
+        toArray(root.querySelectorAll(DATED_CONTROLS)).forEach(function (input) {
+            input.value = '';
+            input.setAttribute('value', '');
+        });
+
+        toArray(root.querySelectorAll('[placeholder]')).forEach(function (element) {
+            element.removeAttribute('placeholder');
+        });
+
+        // Choices.js paints its placeholder as an item inside the closed control.
+        toArray(root.querySelectorAll('.choices__item--placeholder, .choices__placeholder'))
+            .forEach(function (element) {
+                element.textContent = '';
+            });
+
+        // A plain select shows the label of whichever option is selected, and for an unfilled
+        // form that is the schema's "Select..." entry.
+        toArray(root.querySelectorAll('select')).forEach(function (select) {
+            var selected = select.selectedOptions && select.selectedOptions[0];
+            if (selected && !selected.value) {
+                selected.textContent = '';
+            }
+        });
+    }
+
+    /**
+     * Pin the vertical layout the harness just measured, so printing cannot reflow it.
+     *
+     * Chromium measures text about 2% wider on screen than it does when printing (it rounds
+     * glyph advances for the screen and not for paper). A line of text that only just wraps
+     * in the DOM therefore fits on one line on paper, its row prints a line-height shorter,
+     * and every field below it on that page slides up by that much.
+     *
+     * Writing each measured height back as a min-height makes the printed row keep the height
+     * it was measured at - the text still prints on one line, it simply sits in a box that no
+     * longer collapses. Nothing moves when the values are applied, because every element is
+     * given exactly the height it already has.
+     */
+    function freezeHeights(root) {
+        var frozen = 0;
+
+        toArray(root.querySelectorAll('*')).forEach(function (element) {
+            var style = window.getComputedStyle(element);
+            var display = style.display;
+
+            // min-height does not apply to table internals or to inline boxes.
+            if (display === 'none' || display === 'inline' || display.indexOf('table-') === 0) {
+                return;
+            }
+
+            var height = element.getBoundingClientRect().height;
+            if (height <= 0) {
+                return;
+            }
+
+            // getBoundingClientRect reports the border box; min-height sizes the content box
+            // unless the element is border-box, so the difference has to come off.
+            if (style.boxSizing !== 'border-box') {
+                height -= (parseFloat(style.paddingTop) || 0) + (parseFloat(style.paddingBottom) || 0) +
+                    (parseFloat(style.borderTopWidth) || 0) + (parseFloat(style.borderBottomWidth) || 0);
+            }
+
+            if (height > 0) {
+                element.style.minHeight = height + 'px';
+                frozen++;
+            }
+        });
+
+        return frozen;
+    }
+
+    // ============================================================================ pagination
+
+    /**
+     * Decide where every printed page starts and force those breaks, so a DOM offset can be
+     * translated into "page N, this far down".
+     *
+     * Blocks are visited in document order. A block that no longer fits on the current page
+     * is pushed to the next one with `break-before: page`; because CSS fragmentation leaves
+     * DOM geometry untouched, that block's own document offset is the offset Chromium will
+     * print at the top of the new page. Blocks taller than a page are opened up and their
+     * children are considered instead.
+     *
+     * @returns {Array} [{ startY }] - document offset (CSS px) each printed page starts at
+     */
+    function paginate(root, options) {
+        var pageHeight = options.pageHeightPx;
+        var safety = Math.max(0, options.pageBreakSafetyPx);
+        var pages = [{ startY: 0 }];
+        var cursor = { start: 0 };
+
+        walk(root, 0);
+        return pages;
+
+        function startPage(startY) {
+            cursor.start = startY;
+            pages.push({ startY: startY });
+        }
+
+        /** @returns {Boolean} true when this element's children could be broken up */
+        function walk(element, depth) {
+            // Form.io nests deeply (container > panel > card > body > row > column > ...) and a
+            // level the walk refuses to open is a level whose page breaks it has to guess, so
+            // this is only a guard against a pathological tree, not a real limit.
+            if (depth > 60) {
+                return false;
+            }
+
+            if (!canBreakBetweenChildrenOf(element)) {
+                return false;
+            }
+
+            // Snapshot: the loop only adds inline styles, never nodes, so this stays valid.
+            var children = toArray(element.children);
+
+            for (var i = 0; i < children.length; i++) {
+                var child = children[i];
+                var style = window.getComputedStyle(child);
+
+                if (style.display === 'none' || style.visibility === 'hidden') {
+                    continue;
+                }
+                if (style.position === 'absolute' || style.position === 'fixed') {
+                    continue;
+                }
+                if ((style.cssFloat || style.float || 'none') !== 'none') {
+                    continue;
+                }
+
+                var rect = child.getBoundingClientRect();
+                if (rect.height <= 0) {
+                    continue;
+                }
+
+                var top = rect.top + scrollTop() - state.docTop;
+                var bottom = top + rect.height;
+
+                // Anything starting past the current page belongs to a later one. Only
+                // reachable after an oversized block was fragmented by Chromium itself.
+                while (top >= cursor.start + pageHeight) {
+                    startPage(cursor.start + pageHeight);
+                }
+
+                if (bottom <= cursor.start + pageHeight - safety) {
+                    continue;
+                }
+
+                if (rect.height > pageHeight - safety) {
+                    // Taller than a page: break it open, or - if it cannot be broken open -
+                    // let Chromium fragment it at the regular page interval.
+                    if (!child.children.length || !walk(child, depth + 1)) {
+                        while (cursor.start + pageHeight < bottom) {
+                            startPage(cursor.start + pageHeight);
+                        }
+                    }
+                    continue;
+                }
+
+                var previous = previousInFlowSibling(child);
+                var spaceAbove = previous
+                    ? top - (previous.getBoundingClientRect().bottom + scrollTop() - state.docTop)
+                    : (parseFloat(style.marginTop) || 0);
+
+                if (top - spaceAbove <= cursor.start) {
+                    // Would produce an empty page - leave it to Chromium.
+                    continue;
+                }
+
+                startPage(prepareForcedBreak(child, root));
+            }
+
+            return true;
+        }
+    }
+
+    // ====================================================================== field collection
+
+    /**
+     * Walk the rendered form and describe every control as a PDF form field, already
+     * positioned in PDF points.
+     */
+    function collectFields(root, options) {
+        var content = root.querySelector('.formio-pdf-content') || root;
+        var fields = [];
+        var usedNames = Object.create(null);
+
+        // --- dropdowns -----------------------------------------------------------------
+        // Form.io renders most Select components through Choices.js, where the <select> is
+        // hidden and a wrapper div is what the reader actually sees.
+        toArray(content.querySelectorAll('select')).forEach(function (select) {
+            if (isIgnored(select)) {
+                return;
+            }
+
+            var box = visibleBoxFor(select);
+            var rect = box.getBoundingClientRect();
+            if (!isMeasurable(rect, 10)) {
+                return;
+            }
+
+            var seen = Object.create(null);
+            var choices = [];
+            toArray(select.options).forEach(function (option) {
+                var text = (option.text || option.value || '').trim();
+                if (!text || seen[text]) {
+                    return;
+                }
+                seen[text] = true;
+                choices.push(text);
+            });
+
+            fields.push({
+                kind: 'dropdown',
+                name: uniqueName(select, usedNames),
+                options: choices,
+                multiple: !!select.multiple,
+                required: isRequired(select),
+                fontSize: fontSizeFor(box, options),
+                widgets: [toWidget(rect, options)]
+            });
+        });
+
+        // --- radio groups --------------------------------------------------------------
+        // Every radio sharing a name is one PDF radio group with one widget per option.
+        var groups = [];
+        var groupsByName = Object.create(null);
+
+        toArray(content.querySelectorAll('input[type="radio"]')).forEach(function (input) {
+            if (isIgnored(input)) {
+                return;
+            }
+            var rect = input.getBoundingClientRect();
+            if (!isMeasurable(rect, 4)) {
+                return;
+            }
+
+            var key = input.name || ('radio-' + groups.length);
+            var group = groupsByName[key];
+            if (!group) {
+                group = groupsByName[key] = {
+                    element: input,
+                    values: Object.create(null),
+                    widgets: [],
+                    required: isRequired(input)
+                };
+                groups.push(group);
+            }
+
+            var widget = toWidget(rect, options);
+            widget.value = uniqueValue(group.values, input.value, group.widgets.length);
+            group.widgets.push(widget);
+        });
+
+        groups.forEach(function (group) {
+            if (!group.widgets.length) {
+                return;
+            }
+            fields.push({
+                kind: 'radio',
+                name: uniqueName(group.element, usedNames),
+                required: group.required,
+                widgets: group.widgets
+            });
+        });
+
+        // --- checkboxes ----------------------------------------------------------------
+        // Covers the Checkbox component and every option of Select Boxes / Survey.
+        toArray(content.querySelectorAll('input[type="checkbox"]')).forEach(function (input) {
+            if (isIgnored(input)) {
+                return;
+            }
+            var rect = input.getBoundingClientRect();
+            if (!isMeasurable(rect, 4)) {
+                return;
+            }
+
+            fields.push({
+                kind: 'checkbox',
+                name: uniqueName(input, usedNames),
+                required: isRequired(input),
+                widgets: [toWidget(rect, options)]
+            });
+        });
+
+        // --- single line text ----------------------------------------------------------
+        toArray(content.querySelectorAll('input')).forEach(function (input) {
+            var type = (input.getAttribute('type') || 'text').toLowerCase();
+            if (!TEXT_INPUT_TYPES[type] || isIgnored(input)) {
+                return;
+            }
+            var rect = input.getBoundingClientRect();
+            if (!isMeasurable(rect, 10)) {
+                return;
+            }
+
+            fields.push({
+                kind: 'text',
+                name: uniqueName(input, usedNames),
+                required: isRequired(input),
+                fontSize: fontSizeFor(input, options),
+                widgets: [toWidget(rect, options)]
+            });
+        });
+
+        // --- textareas -----------------------------------------------------------------
+        toArray(content.querySelectorAll('textarea')).forEach(function (textarea) {
+            if (isIgnored(textarea)) {
+                return;
+            }
+            var rect = textarea.getBoundingClientRect();
+            if (!isMeasurable(rect, 10)) {
+                return;
+            }
+
+            fields.push({
+                kind: 'multiline',
+                name: uniqueName(textarea, usedNames),
+                required: isRequired(textarea),
+                fontSize: fontSizeFor(textarea, options),
+                widgets: [toWidget(rect, options)]
+            });
+        });
+
+        // --- signatures ----------------------------------------------------------------
+        // The signature pad becomes a real PDF signature field over the same box, so a
+        // reader offers its signing tool there - drawn, typed or an image - instead of the
+        // plain line of text a text field would give.
+        toArray(content.querySelectorAll('.formio-component-signature')).forEach(function (component) {
+            var pad = component.querySelector('.signature-pad-body') ||
+                component.querySelector('canvas');
+            if (!pad) {
+                return;
+            }
+            var rect = pad.getBoundingClientRect();
+            if (!isMeasurable(rect, 12)) {
+                return;
+            }
+
+            var carrier = component.querySelector('input[name]') || pad;
+            fields.push({
+                kind: 'signature',
+                name: uniqueName(carrier, usedNames),
+                widgets: [toWidget(rect, options)]
+            });
+        });
+
+        return fields;
+    }
+
+    /** Controls that can never become a usable PDF field. */
+    function isIgnored(element) {
+        var type = (element.getAttribute('type') || '').toLowerCase();
+        if (IGNORED_INPUT_TYPES[type]) {
+            return true;
+        }
+        // Choices.js clones a search box into the dropdown; it is not part of the form.
+        if (element.classList.contains('choices__input--cloned')) {
+            return true;
+        }
+        return !!element.closest(
+            '.formio-component-button, .formio-component-hidden, .btn, .pagination, ' +
+            '.choices__list, .formio-component-content, .formio-component-htmlelement');
+    }
+
+    /** Choices.js hides the real <select>; the reader sees the wrapper. */
+    function visibleBoxFor(select) {
+        var choices = select.closest('.choices');
+        if (choices) {
+            return choices.querySelector('.choices__inner') || choices;
+        }
+        return select;
+    }
+
+    function isMeasurable(rect, minSize) {
+        return rect.width >= minSize && rect.height >= minSize;
+    }
+
+    function isRequired(element) {
+        return element.required === true || element.getAttribute('aria-required') === 'true';
+    }
+
+    /** Match the on-screen text size so typing into the PDF looks like the printed form. */
+    function fontSizeFor(element, options) {
+        var size = parseFloat(window.getComputedStyle(element).fontSize);
+        if (!size || isNaN(size)) {
+            size = 14;
+        }
+        size = size * PT_PER_PX * options.scale;
+        return Math.round(Math.min(16, Math.max(5, size)) * 10) / 10;
+    }
+
+    /**
+     * Form.io names its inputs data[firstName], data[address][city] or data[grid][0][key].
+     * Flatten that into a PDF friendly, unique field name - '.' is left out on purpose,
+     * because PDF reads it as a field hierarchy separator.
+     */
+    function uniqueName(element, usedNames) {
+        var raw = element.getAttribute('name') || element.getAttribute('id') || 'field';
+        var name = raw
+            .replace(/^data/, '')
+            .replace(/[^A-Za-z0-9_-]+/g, '_')
+            .replace(/_+/g, '_')
+            .replace(/^_+|_+$/g, '');
+
+        if (!name) {
+            name = 'field';
+        }
+
+        var candidate = name;
+        var suffix = 2;
+        while (usedNames[candidate]) {
+            candidate = name + '_' + suffix;
+            suffix++;
+        }
+        usedNames[candidate] = true;
+        return candidate;
+    }
+
+    /** Export values of a radio group have to be distinct and non empty. */
+    function uniqueValue(used, value, index) {
+        var candidate = String(value == null || value === '' ? 'option_' + (index + 1) : value);
+        var suffix = 2;
+        while (used[candidate]) {
+            candidate = value + '_' + suffix;
+            suffix++;
+        }
+        used[candidate] = true;
+        return candidate;
+    }
+
+    /**
+     * Translate a DOM rectangle into a position on a printed page.
+     * Distances become points measured from the page's top-left corner; pdf-lib flips them
+     * onto its bottom-left origin in place(), where the real page height is known.
+     */
+    function toWidget(rect, options) {
+        var top = rect.top + scrollTop() - state.docTop;
+        var left = rect.left + scrollLeft() - state.docLeft;
+        var page = pageIndexOf(top);
+        var factor = PT_PER_PX * options.scale;
+
+        return {
+            page: page,
+            x: options.marginLeftPt + left * factor,
+            yTop: options.marginTopPt + (top - state.pages[page].startY) * factor,
+            width: rect.width * factor,
+            height: rect.height * factor
+        };
+    }
+
+    function pageIndexOf(top) {
+        var index = 0;
+        for (var i = 0; i < state.pages.length; i++) {
+            // Half a pixel of slack: a block forced onto a page sits exactly on its start.
+            if (top + 0.5 >= state.pages[i].startY) {
+                index = i;
+            } else {
+                break;
+            }
+        }
+        return index;
+    }
+
+    // ============================================================== post processing (pdf-lib)
+
+    /**
+     * Entry point invoked by AcroFormContentSource.PostProcessAsync, once Chromium has
+     * printed. Adds a transparent PDF form field over every control measured by render().
+     *
+     * @param {String} base64Pdf the printed document
+     * @returns {Object} { ok, pdf, fields, pdfPages, warnings } or { ok: false, error }
+     */
+    async function apply(base64Pdf) {
+        try {
+            var options = state.options || DEFAULTS;
+            await loadPdfLib(options.pdfLibUrl || DEFAULTS.pdfLibUrl);
+
+            var lib = global.PDFLib;
+            var document_ = await lib.PDFDocument.load(base64ToBytes(base64Pdf), {
+                ignoreEncryption: true,
+                updateMetadata: false
+            });
+
+            var form = document_.getForm();
+            var pages = document_.getPages();
+            var warnings = [];
+            var added = 0;
+
+            var transparent = options.transparentFields !== false;
+
+            state.fields.forEach(function (field) {
+                try {
+                    added += addField(lib, document_, form, pages, field, transparent);
+                } catch (e) {
+                    warnings.push('field ' + field.name + ': ' + (e && e.message ? e.message : e));
+                }
+            });
+
+            if (!transparent) {
+                // Let the reader build its own appearances, so the field chrome shows up even
+                // in viewers that ignore the streams pdf-lib generates. Deliberately not set
+                // in transparent mode: rebuildAppearances() below writes a correct - and
+                // empty - appearance for every field, and NeedAppearances only invites a
+                // viewer to draw its own idea of a form field on top of the printed one.
+                try {
+                    form.acroForm.dict.set(lib.PDFName.of('NeedAppearances'), lib.PDFBool.True);
+                } catch (e) {
+                    warnings.push('needAppearances: ' + (e && e.message ? e.message : e));
+                }
+            }
+
+            try {
+                if (transparent) {
+                    await rebuildAppearances(lib, document_, form);
+                } else {
+                    form.updateFieldAppearances();
+                }
+            } catch (e) {
+                warnings.push('appearances: ' + (e && e.message ? e.message : e));
+            }
+
+            var bytes = await document_.save({ updateFieldAppearances: false });
+
+            return {
+                ok: true,
+                pdf: bytesToBase64(bytes),
+                fields: added,
+                pdfPages: pages.length,
+                warnings: warnings
+            };
+        } catch (e) {
+            return { ok: false, error: (e && e.message) ? e.message : String(e) };
+        }
+    }
+
+    function addField(lib, document_, form, pages, field, transparent) {
+        var pdfField = null;
+        var placed = 0;
+
+        if (field.kind === 'signature') {
+            return addSignatureField(lib, document_, form, pages, field);
+        }
+
+        if (field.kind === 'radio') {
+            pdfField = form.createRadioGroup(field.name);
+            field.widgets.forEach(function (widget) {
+                var target = place(pages, widget);
+                if (!target) {
+                    return;
+                }
+                pdfField.addOptionToPage(widget.value, target.page, target.rect);
+                placed++;
+            });
+
+            if (!placed) {
+                return 0;
+            }
+        } else {
+            var target = place(pages, field.widgets[0]);
+            if (!target) {
+                return 0;
+            }
+
+            if (field.kind === 'dropdown') {
+                pdfField = form.createDropdown(field.name);
+                if (field.options && field.options.length) {
+                    pdfField.addOptions(field.options);
+                }
+                if (field.multiple) {
+                    trySilently(function () { pdfField.enableMultiselect(); });
+                }
+                pdfField.addToPage(target.page, target.rect);
+            } else if (field.kind === 'checkbox') {
+                pdfField = form.createCheckBox(field.name);
+                pdfField.addToPage(target.page, target.rect);
+            } else {
+                pdfField = form.createTextField(field.name);
+                if (field.kind === 'multiline') {
+                    pdfField.enableMultiline();
+                }
+                pdfField.addToPage(target.page, target.rect);
+            }
+
+            placed = 1;
+        }
+
+        // The font size lives in the field's /DA entry, which addToPage is what writes.
+        if (field.fontSize && typeof pdfField.setFontSize === 'function') {
+            trySilently(function () { pdfField.setFontSize(field.fontSize); });
+        }
+        // A reader with field highlighting on draws a red box around every required field,
+        // which is the one piece of chrome the document itself can still switch off. The
+        // printed label keeps its asterisk either way.
+        if (field.required && !transparent) {
+            trySilently(function () { pdfField.enableRequired(); });
+        }
+
+        // Nothing is ever marked read-only. A control the form disables is still printed as a
+        // box on the page, and a box on a printed form is there to be filled in - so it gets
+        // the same editable field as every other control.
+
+        styleWidgets(lib, pdfField, transparent);
+        return placed;
+    }
+
+    /**
+     * A signature pad becomes a real PDF signature field (/FT /Sig) rather than a text field,
+     * so a reader offers its signing tool over that box - Acrobat lets the signature be drawn,
+     * typed or loaded from an image - instead of a single line of typed text.
+     *
+     * Built from the raw dictionary because pdf-lib has no signature field API. It is given
+     * an empty appearance stream so it paints nothing over the printed pad; note that readers
+     * still lay their own "sign here" tab on top of an unsigned signature field, which is
+     * viewer chrome the document cannot switch off.
+     */
+    function addSignatureField(lib, document_, form, pages, field) {
+        var target = place(pages, field.widgets[0]);
+        if (!target) {
+            return 0;
+        }
+
+        var rect = target.rect;
+        var context = document_.context;
+
+        var appearance = context.register(context.flateStream('', {
+            Type: 'XObject',
+            Subtype: 'Form',
+            FormType: 1,
+            BBox: [0, 0, rect.width, rect.height],
+            Resources: {}
+        }));
+
+        var widget = context.obj({
+            Type: 'Annot',
+            Subtype: 'Widget',
+            FT: 'Sig',
+            Rect: [rect.x, rect.y, rect.x + rect.width, rect.y + rect.height],
+            T: lib.PDFString.of(field.name),
+            F: 4,                       // print the annotation
+            P: target.page.ref,
+            BS: { W: 0, S: 'S' },
+            Border: [0, 0, 0],
+            AP: { N: appearance }
+        });
+
+        var ref = context.register(widget);
+        target.page.node.addAnnot(ref);
+        form.acroForm.addField(ref);
+        return 1;
+    }
+
+    /**
+     * Flip a widget onto pdf-lib's bottom-left origin and keep it inside the sheet.
+     * borderWidth 0 plus the /MK removal in styleWidgets() is what leaves the printed
+     * control visible underneath.
+     */
+    function place(pages, widget) {
+        if (!pages.length) {
+            return null;
+        }
+
+        var index = Math.min(Math.max(widget.page, 0), pages.length - 1);
+        var page = pages[index];
+        var size = page.getSize();
+
+        var width = Math.max(widget.width, 6);
+        var height = Math.max(widget.height, 6);
+        var x = Math.min(Math.max(widget.x, 0), Math.max(size.width - width, 0));
+        var y = Math.min(Math.max(size.height - widget.yTop - height, 0), Math.max(size.height - height, 0));
+
+        return { page: page, rect: { x: x, y: y, width: width, height: height, borderWidth: 0 } };
+    }
+
+    /**
+     * Strip everything a widget would paint of its own accord.
+     *
+     * pdf-lib gives every widget a white background and a black border through the /MK
+     * appearance characteristics dictionary. On top of that, a widget with neither /BS nor
+     * /Border falls back to the PDF default border of one unit. Removing all three leaves the
+     * field with nothing to draw, so the only thing on the page is the control Chromium
+     * printed - exactly what the Preview page shows.
+     */
+    function styleWidgets(lib, field, transparent) {
+        if (!transparent) {
+            return;
+        }
+
+        trySilently(function () {
+            field.acroField.getWidgets().forEach(function (widget) {
+                var context = widget.dict.context;
+                widget.dict.delete(lib.PDFName.of('MK'));
+                widget.dict.set(lib.PDFName.of('BS'), context.obj({ W: 0, S: 'S' }));
+                widget.dict.set(lib.PDFName.of('Border'), context.obj([0, 0, 0]));
+            });
+        });
+    }
+
+    /**
+     * Rebuild every appearance stream now that /MK is gone.
+     *
+     * This is not optional. pdf-lib writes a widget's appearance when the field is added to
+     * the page - while /MK still exists - so the stream already contains "fill this rectangle
+     * white". Deleting /MK afterwards does not touch it, and form.updateFieldAppearances()
+     * regenerates only the fields it considers dirty, which a freshly created field is not.
+     * The result would be an opaque white rectangle sitting on top of every printed control.
+     *
+     * Calling each field's own generator directly sidesteps that bookkeeping: with no /MK to
+     * read, the provider emits the path but no paint operator, and a checked box or selected
+     * radio draws just its tick or dot.
+     */
+    async function rebuildAppearances(lib, document_, form) {
+        // Text fields and dropdowns need a font to lay their (currently empty) value out with;
+        // checkboxes and radio groups ignore the extra argument.
+        var font = await document_.embedFont(lib.StandardFonts.Helvetica);
+
+        form.getFields().forEach(function (field) {
+            trySilently(function () { field.defaultUpdateAppearances(font); });
+        });
+
+        blankOffAppearances(lib, document_, form);
+    }
+
+    /**
+     * Blank the "off" appearance of every checkbox and radio button.
+     *
+     * Regenerating gets rid of their white background but not of their outline: pdf-lib's
+     * provider hard-codes a black border colour, and it strokes the path at width 0 - which
+     * PDF defines as the thinnest line the device can draw, not as nothing. An unchecked box
+     * would therefore still lay a hairline square, and a radio a hairline circle, on top of
+     * the one Chromium printed.
+     *
+     * Only the off state is emptied. The on state keeps its stream, so ticking a box or
+     * choosing a radio still draws the mark.
+     */
+    function blankOffAppearances(lib, document_, form) {
+        var context = document_.context;
+        var off = lib.PDFName.of('Off');
+
+        form.getFields().forEach(function (field) {
+            trySilently(function () {
+                field.acroField.getWidgets().forEach(function (widget) {
+                    var appearances = context.lookup(widget.dict.get(lib.PDFName.of('AP')));
+                    if (!appearances || typeof appearances.get !== 'function') {
+                        return;
+                    }
+
+                    var normal = context.lookup(appearances.get(lib.PDFName.of('N')));
+                    // A text field's normal appearance is one stream; a checkbox or radio has
+                    // a dictionary of states, which is the only case with an off state.
+                    if (!normal || typeof normal.get !== 'function' ||
+                        typeof normal.getUnencodedContents === 'function') {
+                        return;
+                    }
+
+                    var current = context.lookup(normal.get(off));
+                    if (!current) {
+                        return;
+                    }
+
+                    normal.set(off, context.register(context.flateStream('', {
+                        Type: 'XObject',
+                        Subtype: 'Form',
+                        FormType: 1,
+                        BBox: current.dict.get(lib.PDFName.of('BBox')),
+                        Resources: {}
+                    })));
+                });
+            });
+        });
+    }
+
+    function trySilently(action) {
+        try {
+            action();
+        } catch (e) {
+            // A viewer-specific nicety failing is never worth losing the whole PDF over.
+        }
+    }
+
+    /** Loaded on demand, so the read-only PDF path never pays for the 0.5 MB bundle. */
+    function loadPdfLib(url) {
+        if (global.PDFLib) {
+            return Promise.resolve();
+        }
+        if (pdfLibPromise) {
+            return pdfLibPromise;
+        }
+
+        pdfLibPromise = new Promise(function (resolve, reject) {
+            var script = document.createElement('script');
+            script.src = url;
+            script.onload = function () {
+                if (global.PDFLib) {
+                    resolve();
+                } else {
+                    reject(new Error('pdf-lib loaded from ' + url + ' but window.PDFLib is missing'));
+                }
+            };
+            script.onerror = function () {
+                reject(new Error('Could not load pdf-lib from ' + url));
+            };
+            document.head.appendChild(script);
+        });
+
+        return pdfLibPromise;
+    }
+
+    function base64ToBytes(base64) {
+        var binary = atob(base64);
+        var bytes = new Uint8Array(binary.length);
+        for (var i = 0; i < binary.length; i++) {
+            bytes[i] = binary.charCodeAt(i);
+        }
+        return bytes;
+    }
+
+    function bytesToBase64(bytes) {
+        // String.fromCharCode blows the argument limit on a whole document, so chunk it.
+        var chunkSize = 0x8000;
+        var parts = [];
+        for (var i = 0; i < bytes.length; i += chunkSize) {
+            parts.push(String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize)));
+        }
+        return btoa(parts.join(''));
+    }
+
+    global.FormAcroForm = {
+        render: render,
+        apply: apply,
+        fields: function () { return state.fields; },
+        pages: function () { return state.pages; },
         version: '1.0.0'
     };
 })(window);

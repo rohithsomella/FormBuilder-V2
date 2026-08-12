@@ -702,6 +702,11 @@ namespace FormBuilderAppService.Pdf
 
                 var pdfBytes = await page.PdfAsync(BuildPdfOptions(options));
 
+                // Give the content source a chance to work on the printed document while the
+                // page that produced it is still alive (the AcroForm source adds form fields
+                // here). Sources that do not override it get the bytes back unchanged.
+                pdfBytes = await source.PostProcessAsync(page, pdfBytes, cancellationToken);
+
                 stopwatch.Stop();
                 _logger.LogInformation(
                     "Generated PDF '{FileName}' ({SizeBytes} bytes) from {Source} in {ElapsedMs} ms " +

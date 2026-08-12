@@ -19,6 +19,13 @@ function escapeHtml(text) {
     return String(text).replace(/[&<>"']/g, function(m) { return map[m]; });
 }
 
+function clearPreviewSessionStorage() {
+    sessionStorage.removeItem('submissionData');
+    sessionStorage.removeItem('previewFormId');
+    sessionStorage.removeItem('previewFormSchema');
+    console.log('✅ Cleared preview session storage keys');
+}
+
 // Initialize report page
 document.addEventListener('DOMContentLoaded', function() {
     // Update heading with tenant name if present
@@ -266,6 +273,8 @@ function viewSubmissionDetails(submission) {
     // Fetch the form schema from the database
     FormBuilderApi.getFormById(formId,
         function(form) {
+            clearPreviewSessionStorage();
+
             // Store both form schema and submission data in sessionStorage
             sessionStorage.setItem('previewFormSchema', JSON.stringify(form));
             sessionStorage.setItem('submissionData', JSON.stringify(submission));

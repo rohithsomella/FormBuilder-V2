@@ -41,6 +41,13 @@ let formMetadata = {
     formKey: ''
 };
 
+function clearPreviewSessionStorage() {
+    sessionStorage.removeItem('submissionData');
+    sessionStorage.removeItem('previewFormId');
+    sessionStorage.removeItem('previewFormSchema');
+    console.log('✅ Cleared preview session storage keys');
+}
+
 //
 // Reusable function to load form JSON into builder
 //
@@ -1023,6 +1030,9 @@ try {
 //
 function PreviewFormWithMode(mode) {
     console.log('PreviewFormWithMode called with mode:', mode);
+
+    // Always clear old preview/submission state before opening a new preview.
+    clearPreviewSessionStorage();
     
     if (!builderInstance) {
         alert('Builder not loaded yet');

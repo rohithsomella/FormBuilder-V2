@@ -21,15 +21,18 @@ namespace FormBuilderAppService.Controllers
         private const string PdfContentType = "application/pdf";
 
         private readonly IFormPdfService _formPdfService;
+        private readonly IAcroFormPdfService _acroFormPdfService;
         private readonly IPdfEngine _pdfEngine;
         private readonly ILogger<PdfController> _logger;
 
         public PdfController(
             IFormPdfService formPdfService,
+            IAcroFormPdfService acroFormPdfService,
             IPdfEngine pdfEngine,
             ILogger<PdfController> logger)
         {
             _formPdfService = formPdfService;
+            _acroFormPdfService = acroFormPdfService;
             _pdfEngine = pdfEngine;
             _logger = logger;
         }
@@ -73,6 +76,47 @@ namespace FormBuilderAppService.Controllers
             }
 
             return await GenerateAsync(() => _formPdfService.GenerateAsync(submissionId, cancellationToken), download);
+        }
+
+        /// <summary>
+        /// Render a form definition as a fillable AcroForm PDF: the Preview page exactly as
+        /// the read-only PDF prints it, with a real, editable PDF form field over every
+        /// textbox, checkbox, radio, dropdown, textarea and signature area.
+        /// </summary>
+        /// <param name="request">Form id plus optional paper/header/footer overrides.</param>
+        /// <param name="download">true returns the PDF as an attachment, false (default) inline.</param>
+        [HttpPost("acroform")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status400BadRequest)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<IActionResult> GenerateAcroFormPdf(
+            [FromBody] AcroFormPdfRequest request,
+            [FromQuery] bool download = false,
+            CancellationToken cancellationToken = default)
+        {
+            return await GenerateAsync(() => _acroFormPdfService.GenerateAsync(request, cancellationToken), download);
+        }
+
+        /// <summary>
+        /// Fillable AcroForm PDF for a single form using the default settings. Convenient for
+        /// direct links and mobile clients.
+        /// </summary>
+        [HttpGet("acroform/{formId}")]
+        [ProducesResponseType(StatusCodes.Status200OK)]
+        [ProducesResponseType(StatusCodes.Status404NotFound)]
+        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
+        public async Task<IActionResult> GenerateAcroFormPdf(
+            string formId,
+            [FromQuery] bool download = false,
+            CancellationToken cancellationToken = default)
+        {
+            if (string.IsNullOrWhiteSpace(formId))
+            {
+                return BadRequest(new { message = "formId is required" });
+            }
+
+            return await GenerateAsync(() => _acroFormPdfService.GenerateAsync(formId, cancellationToken), download);
         }
 
         /// <summary>

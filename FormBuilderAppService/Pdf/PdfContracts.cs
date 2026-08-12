@@ -132,6 +132,9 @@ namespace FormBuilderAppService.Pdf
         /// <summary>Default header/footer settings; individual requests may override them.</summary>
         public PdfHeaderFooterOptions HeaderFooter { get; set; } = new();
 
+        /// <summary>Defaults for the fillable AcroForm PDF; individual requests may override them.</summary>
+        public AcroFormSettings AcroForm { get; set; } = new();
+
         public bool IsProduction =>
             string.Equals(Mode, "Production", StringComparison.OrdinalIgnoreCase);
     }
@@ -146,6 +149,7 @@ namespace FormBuilderAppService.Pdf
     public class PdfPageOptions
     {
         private const double PxPerInch = 96d;
+        private const double PtPerInch = 72d;
         private const double MmPerInch = 25.4d;
 
         private static readonly Dictionary<string, (double WidthIn, double HeightIn)> Formats =
@@ -213,13 +217,29 @@ namespace FormBuilderAppService.Pdf
         /// Height available to the content, in CSS pixels. Used by the harness to decide
         /// whether a component still fits on the current page.
         /// </summary>
-        public int PrintableHeightPx()
+        public int PrintableHeightPx() => (int)Math.Round(PrintableHeightPxExact());
+
+        /// <summary>
+        /// Same as <see cref="PrintableHeightPx"/> but unrounded. The AcroForm harness walks
+        /// page after page in this unit, so half a pixel of rounding per page would slowly
+        /// push the injected form fields away from the controls they sit on.
+        /// </summary>
+        public double PrintableHeightPxExact()
         {
             var (widthIn, heightIn) = PaperSizeInches();
             var pageHeightIn = Landscape ? widthIn : heightIn;
             var contentIn = pageHeightIn - ToInches(MarginTop) - ToInches(MarginBottom);
-            return (int)Math.Round(Math.Max(contentIn, 1d) * PxPerInch / EffectiveScale());
+            return Math.Max(contentIn, 1d) * PxPerInch / EffectiveScale();
         }
+
+        /// <summary>Left margin in PDF points, the unit PDF form field rectangles use.</summary>
+        public double MarginLeftPt() => ToInches(MarginLeft) * PtPerInch;
+
+        /// <summary>Top margin in PDF points.</summary>
+        public double MarginTopPt() => ToInches(MarginTop) * PtPerInch;
+
+        /// <summary>The scale actually handed to PrintToPDF (0 and negatives mean "unscaled").</summary>
+        public float EffectiveScale() => Scale <= 0 ? 1f : Scale;
 
         /// <summary>
         /// Reduce <see cref="Scale"/> until the layout width reaches
@@ -247,8 +267,6 @@ namespace FormBuilderAppService.Pdf
 
             return this;
         }
-
-        private float EffectiveScale() => Scale <= 0 ? 1f : Scale;
 
         private (double WidthIn, double HeightIn) PaperSizeInches() =>
             Formats.TryGetValue(Format ?? "A4", out var size) ? size : Formats["A4"];
@@ -598,6 +616,17 @@ namespace FormBuilderAppService.Pdf
         /// the engine prints immediately afterwards.
         /// </summary>
         Task PrepareAsync(IPage page, CancellationToken cancellationToken);
+
+        /// <summary>
+        /// Optional hook that runs after Chromium has printed, on the page that produced the
+        /// document. Return the bytes to send to the caller.
+        ///
+        /// The default implementation hands the printed bytes straight through, so a content
+        /// source that only renders HTML does not have to know this step exists. The AcroForm
+        /// source uses it to lay editable PDF form fields over the rendered controls.
+        /// </summary>
+        Task<byte[]> PostProcessAsync(IPage page, byte[] pdfBytes, CancellationToken cancellationToken)
+            => Task.FromResult(pdfBytes);
     }
 
     /// <summary>
@@ -720,6 +749,7 @@ namespace FormBuilderAppService.Pdf
 
             // Feature services follow the lifetime of the repositories they depend on.
             services.AddScoped<IFormPdfService, FormPdfService>();
+            services.AddScoped<IAcroFormPdfService, AcroFormPdfService>();
 
             return services;
         }
