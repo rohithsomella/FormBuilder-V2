@@ -26,13 +26,19 @@ namespace FormBuilderAppService.Repositories
         {
             try
             {
-                _logger.LogInformation("Fetching all forms from MongoDB.");
+                _logger.LogInformation("Fetching forms with empty or null project from MongoDB.");
+
+                // Filter for forms where project/templateId is null or empty
+                var filter = Builders<Form>.Filter.Or(
+                    Builders<Form>.Filter.Eq(f => f.TenantId, null),
+                    Builders<Form>.Filter.Eq(f => f.TenantId, Guid.Empty)
+                );
 
                 var forms = await _forms
-                    .Find(Builders<Form>.Filter.Empty)
+                    .Find(filter)
                     .ToListAsync();
 
-                _logger.LogInformation("Successfully fetched {Count} forms.", forms.Count);
+                _logger.LogInformation("Successfully fetched {Count} forms with empty/null project.", forms.Count);
 
                 return forms.Select(MapToDto).ToList();
             }
