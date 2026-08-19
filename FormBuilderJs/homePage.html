@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html>
 <head>
@@ -10,10 +11,32 @@
     <link rel="stylesheet"
         href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
     <link rel="stylesheet" href="app/css/home.css">
+
+    <!--
+        Loaded in <head> so the page guard runs before any content paints. Everyone -
+        Admin and User alike - lands here after signing in; the role only decides which
+        Profile page the avatar leads to.
+    -->
+    <script src="app/js/auth.js"></script>
 </head>
 <body>
 
-<div class="home-container">
+<div class="home-container" style="position: relative;">
+
+    <!-- Top Right Profile & Sign Out Controls -->
+    <div style="position: absolute; top: 35px; right: 40px; display: flex; gap: 12px; align-items: center; z-index: 10;">
+        <div onclick="goToProfile()" 
+             style="width: 40px; height: 40px; border-radius: 50%; background: linear-gradient(135deg, #5f5de8, #8b67ff); color: white; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 14px; cursor: pointer; box-shadow: 0 4px 12px rgba(95, 93, 232, 0.3);" 
+             id="homeProfileAvatar" title="View Profile">
+            AU
+        </div>
+        <button onclick="handleProfileAction()" 
+                style="border: none; background: transparent; color: #15152d; cursor: pointer; font-size: 20px; display: flex; align-items: center; justify-content: center; opacity: 0.85;" 
+                title="Sign Out">
+            <i class="bi bi-box-arrow-right"></i>
+        </button>
+    </div>
+
     <div class="home-header">
         <h1>Form Builder</h1>
         <p>Build and manage forms</p>
@@ -72,8 +95,51 @@
 </div>
 </div>
 
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
+
 <script>
-    // Clear session storage when creating new form from home page
+    function getInitials(name) {
+        if (!name) return 'U';
+        return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+    }
+
+    function updateHomeProfile() {
+        const user = Auth.getCurrentUser();
+        const avatar = document.getElementById('homeProfileAvatar');
+
+        if (user && avatar) {
+            avatar.textContent = getInitials(user.name);
+            avatar.title = user.isAdmin
+                ? 'Admin Profile - ' + user.name
+                : 'View Profile - ' + user.name;
+        }
+    }
+
+    /*
+     * The role check. This is the only place Home decides where the Profile lives,
+     * and it decides it from the role the API put in the token - never from anything
+     * typed into the browser.
+     *
+     * This is a UI decision only. It picks which page to open; it does not grant
+     * access to anything. The API enforces roles independently on every request.
+     */
+    function goToProfile() {
+        const user = Auth.getCurrentUser();
+
+        if (user && user.role === 'Admin') {
+            window.location.href = 'app/html/adminProfile.html';
+        } else {
+            window.location.href = 'app/html/userProfile.html';
+        }
+    }
+
+    function handleProfileAction() {
+        if (confirm('Are you sure you want to sign out?')) {
+            Auth.logout();
+        }
+    }
+
     document.getElementById('createFormCard').addEventListener('click', function(e) {
         console.log('🧹 Clearing session storage for new form...');
         sessionStorage.removeItem('editingFormId');
@@ -82,7 +148,20 @@
         sessionStorage.removeItem('previewFormId');
         sessionStorage.removeItem('previewFormSchema');
         console.log('✓ Session storage cleared');
-        // Allow link to navigate normally
+    });
+
+    /*
+     * Require a session, then draw the page from the real user.
+     *
+     * refreshCurrentUser() re-reads the account from GET /api/auth/me rather than
+     * trusting what is cached locally, so a refresh of this page always reflects the
+     * account the token actually belongs to.
+     */
+    Auth.requireAuth().then(function (user) {
+        if (!user) return; // guard is redirecting or reloading
+
+        updateHomeProfile();
+        Auth.refreshCurrentUser().then(updateHomeProfile);
     });
 </script>
 

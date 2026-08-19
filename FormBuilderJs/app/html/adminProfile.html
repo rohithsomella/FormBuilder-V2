@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Profile</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../css/builder.css">
+    <link rel="stylesheet" href="../css/userProfile.css">
+
+    <!-- In <head> so the guard settles before anything paints. -->
+    <script src="../js/auth.js"></script>
+
+    <style>
+        .role-badge { display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 999px; background: linear-gradient(135deg, #5f5de8, #8b67ff); color: #fff; font-size: 11px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
+        .admin-api-row { display: flex; align-items: center; justify-content: center; gap: 10px; margin-top: 24px; font-size: 12px; color: #777; }
+        .admin-api-status { padding: 3px 10px; border-radius: 999px; font-weight: 600; font-size: 11px; }
+        .admin-api-status.checking { background: #eef0f4; color: #667; }
+        .admin-api-status.ok { background: #e6f6ec; color: #1d7a41; }
+        .admin-api-status.failed { background: #fdecea; color: #a4322a; }
+    </style>
+</head>
+
+<!--
+    data-profile-role tells userProfile.js which role this page belongs to. A non-admin
+    who reaches this URL is redirected straight to userProfile.html, so admin content is
+    never rendered for a normal user and never lingers after switching accounts.
+
+    Note this redirect is convenience, not protection: the Admin-only API below is what
+    actually enforces the role.
+-->
+<body data-profile-role="Admin">
+
+    <div class="menu-overlay" id="menuOverlay"></div>
+
+    <!-- Navigation Header -->
+    <div class="profile-nav">
+        <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+            <i class="bi bi-list"></i>
+        </button>
+        <h2>Admin Profile</h2>
+    </div>
+
+    <!-- Main Centered Layout Wrapper -->
+    <div class="profile-page-container">
+        <div class="wireframe-card">
+
+            <!-- Top Row: Circle Avatar + Name + Role -->
+            <div class="header-wireframe-layout">
+                <div class="profile-pic-circle" id="profileAvatar">--</div>
+
+                <div class="header-fields-stack">
+                    <!-- Full Name Box -->
+                    <div class="info-box">
+                        <span class="box-label">Full Name</span>
+                        <span class="box-value" id="fieldName">-</span>
+                    </div>
+
+                    <!-- Role Box -->
+                    <div class="info-box info-box-sm">
+                        <span class="box-label">Role</span>
+                        <span class="box-value">
+                            <span class="role-badge"><i class="bi bi-shield-lock-fill"></i>
+                                <span id="fieldRole">-</span>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bottom Row: Email + Other Important Fields -->
+            <div class="bottom-fields-grid">
+                <!-- Email Box -->
+                <div class="info-box">
+                    <span class="box-label">Email</span>
+                    <span class="box-value" id="fieldEmail">-</span>
+                </div>
+
+                <!-- Username -->
+                <div class="info-box">
+                    <span class="box-label">Username</span>
+                    <span class="box-value" id="fieldUserName">-</span>
+                </div>
+
+                <!-- Other Important Field: User ID -->
+                <div class="info-box">
+                    <span class="box-label">User ID</span>
+                    <span class="box-value" id="fieldUserId">-</span>
+                </div>
+
+            </div>
+
+            <!-- Action Buttons -->
+            <div class="card-actions-row">
+                <button class="btn-action btn-edit" id="btnEditProfile">
+                    <i class="bi bi-pencil"></i> Edit Profile
+                </button>
+                <button class="btn-action btn-edit" id="btnManageUsers">
+                    <i class="bi bi-people"></i> Manage Users
+                </button>
+                <button class="btn-action btn-signout" id="btnSignOut">
+                    <i class="bi bi-box-arrow-right"></i> Sign Out
+                </button>
+            </div>
+
+            <!--
+                Live confirmation that the Admin role is real. This calls an endpoint
+                marked [Authorize(Roles = "Admin")]; a browser pretending to be an admin
+                gets 403 here and the badge says so.
+            -->
+            <div class="admin-api-row">
+                <i class="bi bi-shield-check"></i>
+                <span>Admin API access:</span>
+                <span class="admin-api-status checking" id="adminApiStatus">Checking...</span>
+            </div>
+
+        </div>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="../js/CommonItems.js"></script>
+    <script src="../js/userProfile.js"></script>
+</body>
+
+</html>

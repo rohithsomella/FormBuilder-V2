@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sign In - Form Builder</title>
+
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../css/builder.css">
+    <link rel="stylesheet" href="../css/userProfile.css">
+    <style>
+        .login-form { max-width: 400px; }
+        .form-group-admin { margin-bottom: 20px; }
+        .form-label { font-size: 12px; text-transform: uppercase; color: #999; font-weight: 600; margin-bottom: 8px; display: block; }
+        .form-input { width: 100%; padding: 12px; border: 1px solid #e5e5e5; border-radius: 6px; font-size: 14px; }
+        .form-input:focus { outline: none; border-color: #5f5de8; box-shadow: 0 0 0 3px rgba(95, 93, 232, 0.1); }
+        .btn-login { width: 100%; padding: 12px; background: linear-gradient(135deg, #5f5de8, #8b67ff); color: white; border: none; border-radius: 6px; font-weight: 600; cursor: pointer; margin-top: 20px; }
+        .btn-login:hover { opacity: 0.9; }
+        .btn-login:disabled { opacity: 0.6; cursor: default; }
+        .login-error { display: none; margin-top: 18px; padding: 10px 12px; border-radius: 6px; background: #fdecea; color: #a4322a; font-size: 13px; text-align: center; }
+        .login-hint { text-align: center; margin-top: 20px; font-size: 12px; color: #999; }
+    </style>
+</head>
+<body>
+
+<!-- Main Centered Layout Wrapper -->
+<div class="profile-page-container">
+    <div class="wireframe-card">
+        <h3 style="text-align: center; margin-bottom: 6px; font-size: 24px;">Form Builder</h3>
+        <p style="text-align: center; margin-bottom: 30px; color: #999; font-size: 13px;">Sign in to continue</p>
+
+        <!--
+            One login form for everyone. There is no separate admin sign-in: the same
+            request authenticates every user and the API decides, from the roles stored
+            against the account, what they are allowed to do.
+        -->
+        <form class="login-form" id="loginForm" style="margin: 0 auto;" autocomplete="on" novalidate>
+            <div class="form-group-admin">
+                <label class="form-label" for="loginIdentifier">Username or Email</label>
+                <input type="text" class="form-input" id="loginIdentifier" name="username"
+                       placeholder="Enter your username or email" autocomplete="username" autofocus>
+            </div>
+
+            <div class="form-group-admin">
+                <label class="form-label" for="loginPassword">Password</label>
+                <input type="password" class="form-input" id="loginPassword" name="password"
+                       placeholder="Enter your password" autocomplete="current-password">
+            </div>
+
+            <button type="submit" class="btn-login" id="btnLogin">
+                <i class="bi bi-box-arrow-in-right"></i> <span id="btnLoginText">Sign In</span>
+            </button>
+
+            <!-- Always the same wording, whatever actually went wrong. -->
+            <div class="login-error" id="loginError"></div>
+
+            <p class="login-hint" id="loginHint"></p>
+        </form>
+    </div>
+</div>
+
+<script src="../js/auth.js"></script>
+<script>
+    (function () {
+        'use strict';
+
+        var form = document.getElementById('loginForm');
+        var identifierInput = document.getElementById('loginIdentifier');
+        var passwordInput = document.getElementById('loginPassword');
+        var button = document.getElementById('btnLogin');
+        var buttonText = document.getElementById('btnLoginText');
+        var errorBox = document.getElementById('loginError');
+
+        // Arriving at the login page always ends any previous session, so a half-expired
+        // token or a stale profile can never bleed into the next sign-in.
+        Auth.clearSession();
+
+        function showError(message) {
+            errorBox.textContent = message;
+            errorBox.style.display = 'block';
+        }
+
+        function clearError() {
+            errorBox.style.display = 'none';
+        }
+
+        function setBusy(busy) {
+            button.disabled = busy;
+            buttonText.textContent = busy ? 'Signing in...' : 'Sign In';
+        }
+
+        form.addEventListener('submit', function (event) {
+            event.preventDefault();
+            clearError();
+
+            var identifier = identifierInput.value.trim();
+            var password = passwordInput.value;
+
+            if (!identifier || !password) {
+                showError('Please enter your username or email and your password.');
+                return;
+            }
+
+            setBusy(true);
+
+            Auth.login(identifier, password)
+                .then(function () {
+                    // Everyone lands on the Home page. Home then decides which profile
+                    // to offer based on the role that came back from the API.
+                    window.location.href = Auth.consumeReturnUrl();
+                })
+                .catch(function (error) {
+                    setBusy(false);
+                    passwordInput.value = '';
+                    passwordInput.focus();
+                    showError(error && error.message ? error.message : 'Invalid username or password.');
+                });
+        });
+    })();
+</script>
+
+</body>
+</html>

@@ -1,0 +1,197 @@
+Base Setup & Overrides
+html, body {
+    margin: 0 !important;
+    padding: 0 !important;
+    width: 100% !important;
+    min-height: 100vh !important;
+    background-color: #f4f6f9 !important;
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+
+/* Top Navigation Bar */
+.profile-nav {
+    height: 60px;
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    padding: 0 32px;
+    gap: 16px;
+}
+
+.profile-nav h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: #1e293b;
+    margin: 0;
+}
+
+.profile-nav .menu-btn {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #64748b;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+}
+
+/* Page Container - Center Wrapper */
+.profile-page-container {
+    display: flex !important;
+    justify-content: center !important;
+    align-items: flex-start !important;
+    min-height: auto !important;
+    padding: 20px 32px 40px 32px !important;
+    box-sizing: border-box !important;
+    width: 100% !important;
+    margin: 0 auto !important;
+}
+
+/* Main Wireframe Card Container - Wider Max-Width */
+.wireframe-card {
+    width: 100% !important;
+    max-width: 1100px !important; /* Expanded width to eliminate empty space */
+    background: #ffffff !important;
+    border-radius: 16px !important;
+    padding: 48px !important;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05) !important;
+    border: 1px solid #e2e8f0 !important;
+    box-sizing: border-box !important;
+    margin: 0 auto !important;
+}
+
+/* Header Layout: Profile Pic Circle + Right Stack */
+.header-wireframe-layout {
+    display: flex;
+    align-items: center;
+    gap: 36px;
+    margin-bottom: 32px;
+}
+
+.profile-pic-circle {
+    width: 110px;
+    height: 110px;
+    min-width: 110px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #6c5ce7, #8c7ae6);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 38px;
+    font-weight: 700;
+    box-shadow: 0 8px 20px rgba(108, 92, 231, 0.25);
+}
+
+.header-fields-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    flex-grow: 1;
+}
+
+/* Box Style for Fields */
+.info-box {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 20px;
+    width: 100%;
+    box-sizing: border-box;
+    transition: all 0.2s ease;
+}
+
+.info-box:hover {
+    border-color: #cbd5e1;
+    background: #ffffff;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.03);
+}
+
+.info-box-sm {
+    max-width: 320px;
+}
+
+.box-label {
+    font-size: 10px;
+    color: #94a3b8;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    margin-bottom: 4px;
+    display: block;
+}
+
+.box-value {
+    font-size: 15px;
+    color: #1e293b;
+    font-weight: 600;
+    display: block;
+    word-break: break-word;
+}
+
+/* Bottom Grid for Email & User ID */
+.bottom-fields-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 24px;
+    padding-top: 28px;
+    border-top: 1px solid #f1f5f9;
+}
+
+/* Action Buttons Footer */
+.card-actions-row {
+    display: flex;
+    justify-content: flex-end;
+    gap: 12px;
+    margin-top: 32px;
+}
+
+.btn-action {
+    padding: 10px 24px;
+    border-radius: 8px;
+    border: none;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    transition: transform 0.2s;
+}
+
+.btn-action:hover {
+    transform: translateY(-2px);
+}
+
+.btn-edit {
+    background: linear-gradient(135deg, #6c5ce7, #8c7ae6);
+    color: #ffffff;
+    box-shadow: 0 4px 12px rgba(108, 92, 231, 0.25);
+}
+
+.btn-signout {
+    background: #ff5252;
+    color: #ffffff;
+}
+
+/* Tabs Navigation */
+.tabs-container { display: flex; gap: 0; border-bottom: 2px solid #e5e5e5; margin-bottom: 0px; }
+.tab-link { padding: 12px 24px; font-size: 14px; font-weight: 600; color: #666; text-decoration: none; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; }
+.tab-link:hover { color: #333; }
+.tab-link.active { color: #5f5de8; border-bottom-color: #5f5de8; }
+
+/* Mobile Responsive Adjustments */
+@media (max-width: 640px) {
+    .header-wireframe-layout {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .bottom-fields-grid {
+        grid-template-columns: 1fr;
+    }
+    .info-box-sm {
+        max-width: 100%;
+    }
+}

@@ -1,4 +1,5 @@
 using FormBuilderAppService.Pdf;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Net.Http.Headers;
 
@@ -16,6 +17,10 @@ namespace FormBuilderAppService.Controllers
     // Deliberately no class-level [Produces("application/pdf")]: it would make content
     // negotiation reject the JSON error bodies below with an empty 406, so a caller could
     // never see why a PDF failed. File(...) sets the PDF content type explicitly instead.
+    // Every endpoint on this controller requires a valid JWT. The frontend attaches it
+    // automatically (see the $.ajaxPrefilter in app/js/auth.js), so no page had to change.
+    // A request without a token gets 401 regardless of what the browser UI allows.
+    [Authorize]
     public class PdfController : ControllerBase
     {
         private const string PdfContentType = "application/pdf";
@@ -155,7 +160,11 @@ namespace FormBuilderAppService.Controllers
         /// <summary>
         /// Report whether Chromium and the rendering assets are ready. Useful as a
         /// deployment smoke test.
+        ///
+        /// Left anonymous so load balancers and monitoring can probe it without a token.
+        /// It reports readiness only - no form, submission or user data.
         /// </summary>
+        [AllowAnonymous]
         [HttpGet("health")]
         [Produces("application/json")]
         [ProducesResponseType(StatusCodes.Status200OK)]

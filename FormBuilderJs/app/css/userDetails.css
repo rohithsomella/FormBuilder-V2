@@ -1,0 +1,57 @@
+/* Tabs Navigation */
+.tabs-container { display: flex; gap: 0; border-bottom: 2px solid #e5e5e5; margin-bottom: 0px; }
+.tab-link { padding: 12px 24px; font-size: 14px; font-weight: 600; color: #666; text-decoration: none; cursor: pointer; border-bottom: 3px solid transparent; transition: all 0.3s; }
+.tab-link:hover { color: #333; }
+.tab-link.active { color: #5f5de8; border-bottom-color: #5f5de8; }
+
+/* Controls Row: Search, Sort, Add Button */
+.controls-row { display: flex; align-items: center; gap: 16px; margin-bottom: 20px; justify-content: space-between; }
+.search-sort-container { display: flex; gap: 12px; align-items: center; flex: 1; }
+.search-input { padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; width: 250px; }
+.search-input::placeholder { color: #999; }
+.search-input:focus { outline: none; border-color: #5f5de8; }
+.sort-select { padding: 10px 14px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: white; cursor: pointer; }
+.sort-select:focus { outline: none; border-color: #5f5de8; }
+.btn-add-user { background: #2c3e50; color: white; border: none; padding: 10px 18px; border-radius: 4px; font-size: 14px; font-weight: 600; cursor: pointer; display: flex; align-items: center; gap: 6px; }
+.btn-add-user:hover { background: #1a252f; }
+
+/* Table Styling */
+.table-wrapper { overflow-x: auto; margin-bottom: 20px; }
+.users-table { width: 100%; border-collapse: collapse; background: white; }
+.users-table thead tr { background: #f5f7fa; }
+.users-table th { padding: 14px; text-align: left; font-size: 12px; font-weight: 600; text-transform: uppercase; color: #666; border-bottom: 2px solid #e5e5e5; }
+.users-table th:last-child { text-align: center; }
+.users-table td { padding: 14px; border-bottom: 1px solid #e5e5e5; font-size: 14px; }
+.users-table tbody tr:hover { background: #f9f9f9; }
+
+/* Actions - Centered */
+.actions-cell { text-align: center; }
+.btn-action { padding: 6px 12px; margin-left: 6px; border: none; border-radius: 4px; font-size: 12px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px; font-weight: 600; }
+.btn-edit { background: #5f5de8; color: white; }
+.btn-edit:hover { background: #4a47c9; }
+.btn-delete { background: #dc3545; color: white; }
+.btn-delete:hover { background: #c82333; }
+
+/* Pagination */
+.pagination-container { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
+.pagination-btn { padding: 8px 12px; border: 1px solid #ddd; background: white; cursor: pointer; border-radius: 4px; font-size: 12px; }
+.pagination-btn:hover { background: #f5f5f5; }
+.pagination-btn.active { background: #5f5de8; color: white; border-color: #5f5de8; }
+.pagination-info { text-align: center; font-size: 12px; color: #999; margin-top: 10px; }
+
+/* Modal Styling */
+.modal-overlay { display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; justify-content: center; align-items: center; }
+.modal-overlay.active { display: flex; }
+.modal-content { background: white; border-radius: 8px; padding: 30px; width: 90%; max-width: 450px; box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2); }
+.modal-header { font-size: 22px; font-weight: 700; color: #333; margin-bottom: 24px; }
+.modal-form-group { margin-bottom: 20px; }
+.modal-label { display: block; font-size: 14px; font-weight: 600; color: #333; margin-bottom: 8px; }
+.modal-input { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; box-sizing: border-box; }
+.modal-input:focus { outline: none; border-color: #5f5de8; box-shadow: 0 0 0 3px rgba(95, 93, 232, 0.1); }
+.modal-select { width: 100%; padding: 10px 12px; border: 1px solid #ddd; border-radius: 4px; font-size: 14px; background: white; cursor: pointer; box-sizing: border-box; }
+.modal-select:focus { outline: none; border-color: #5f5de8; }
+.modal-buttons { display: flex; gap: 12px; justify-content: flex-end; margin-top: 28px; }
+.modal-btn-cancel { padding: 10px 24px; border: 1px solid #ddd; background: white; color: #333; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.modal-btn-cancel:hover { background: #f5f5f5; }
+.modal-btn-save { padding: 10px 24px; background: #28a745; color: white; border: none; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.modal-btn-save:hover { background: #218838; }

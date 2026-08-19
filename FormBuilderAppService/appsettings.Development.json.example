@@ -1,0 +1,69 @@
+// TEMPLATE - copy this file to "appsettings.Development.json" and fill in the key.
+//
+//     copy appsettings.Development.json.example appsettings.Development.json
+//
+// The real appsettings.Development.json is git-ignored because it holds a signing key
+// and local account passwords. This template is committed so a fresh clone can be set
+// up without guessing what belongs in it.
+//
+// Every setting here OVERRIDES the matching key in appsettings.json when
+// ASPNETCORE_ENVIRONMENT=Development. Anything not listed here falls through to
+// appsettings.json - so Jwt:Issuer, Jwt:Audience and Jwt:ExpirationMinutes still come
+// from the base file.
+{
+  "Logging": {
+    "LogLevel": {
+      "Default": "Information",
+      "Microsoft.AspNetCore": "Warning"
+    }
+  },
+
+  // REQUIRED. The app refuses to start without it, and rejects anything under 32
+  // characters because tokens are signed with HMAC-SHA256.
+  //
+  // Generate a throwaway local value:
+  //     powershell -c "[Convert]::ToBase64String((1..48|%{Get-Random -Max 256}))"
+  //
+  // Never reuse this in production - there the key comes from the JWT__SECRETKEY
+  // environment variable or user-secrets.
+  "Jwt": {
+    "SecretKey": ""
+  },
+
+
+  // Accounts created on first run if they do not already exist. Seeding is
+  // create-if-missing only: changing a password here will NOT reset an account that has
+  // already been created - delete the row from AspNetUsers first.
+  //
+  // Admin rights come from the "Roles" list, which becomes a row in AspNetUserRoles.
+  // No code anywhere treats a particular username as an administrator.
+  "IdentitySeed": {
+    "Enabled": true,
+    "Users": [
+      {
+        "UserName": "rohithsomella",
+        "Email": "rohith.somella@formbuilder.local",
+        "FullName": "Rohith Somella",
+        "Password": "Admin@12345",
+        "Roles": [ "Admin" ]
+      },
+      {
+        "UserName": "testuser",
+        "Email": "test.user@formbuilder.local",
+        "FullName": "Test User",
+        "Password": "User@12345",
+        "Roles": [ "User" ]
+      }
+    ]
+  },
+
+  // Points the PDF renderer straight at the frontend project, so a frontend rebuild is
+  // picked up with no copying. Without these two lines the renderer falls back to
+  // wwwroot/pdf/dist from appsettings.json, which does not exist in a dev checkout and
+  // PDF generation fails.
+  "PdfRenderer": {
+    "Mode": "Development",
+    "AssetsPath": "../FormBuilderJs/dist",
+    "AppAssetsPath": "../FormBuilderJs/app"
+  }
+}

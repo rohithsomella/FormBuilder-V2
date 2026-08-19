@@ -87,4 +87,52 @@ function setupMenuEventListeners() {
 // Initialize menu when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
     initializeMenu();
+
+    // Every page carrying this menu is a signed-in page. The guard either lets the
+    // page through or takes over and redirects, so nothing below has to cope with
+    // there being no user.
+    Auth.requireAuth().then(function (user) {
+        if (!user) return;
+
+        updateMenuProfile();
+        Auth.refreshCurrentUser().then(updateMenuProfile);
+    });
 });
+
+// Get initials from full name
+function getInitials(name) {
+    if (!name) return 'U';
+    return name.trim().split(/\s+/).slice(0, 2).map(n => n[0]).join('').toUpperCase();
+}
+
+// Update menu profile display
+function updateMenuProfile() {
+    const user = Auth.getCurrentUser();
+    const avatar = document.getElementById('menuProfileAvatar');
+    const nameEl = document.getElementById('menuProfileName');
+    const roleEl = document.getElementById('menuProfileRole');
+
+    if (user && avatar && nameEl && roleEl) {
+        avatar.textContent = getInitials(user.name);
+        nameEl.textContent = user.name;
+        roleEl.textContent = user.role;
+    }
+}
+
+// Navigate to the profile page for the signed-in user's role.
+// UI routing only - the API decides what an admin may actually do.
+function goToProfile() {
+    const user = Auth.getCurrentUser();
+    const page = (user && user.role === 'Admin') ? 'adminProfile.html' : 'userProfile.html';
+
+    const inAppHtml = window.location.pathname.includes('/app/html/');
+    window.location.href = inAppHtml ? page : ('app/html/' + page);
+}
+
+// Handle profile action (sign out)
+function handleProfileAction() {
+    if (confirm('Are you sure you want to sign out?')) {
+        // Clears the token and cached user, then returns to login.html.
+        Auth.logout();
+    }
+}

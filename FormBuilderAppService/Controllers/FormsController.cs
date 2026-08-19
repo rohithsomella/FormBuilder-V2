@@ -1,12 +1,17 @@
 using FormBuilderAppService.Models.DTOs;
 using FormBuilderAppService.Services;
 using FormBuilderAppService.Services.Interfaces;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
 namespace FormBuilderAppService.Controllers
 {
     [ApiController]
     [Route("api/[controller]")]
+    // Every endpoint on this controller requires a valid JWT. The frontend attaches it
+    // automatically (see the $.ajaxPrefilter in app/js/auth.js), so no page had to change.
+    // A request without a token gets 401 regardless of what the browser UI allows.
+    [Authorize]
     public class FormsController : ControllerBase
     {
         private readonly IFormService _formService;

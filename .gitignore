@@ -10,3 +10,14 @@
 
 # Logs
 *.log
+
+# Local environment settings.
+#
+# Holds the local JWT signing key and the seeded development account passwords, so it
+# must never be committed. A committed template lives alongside it:
+#   FormBuilderAppService/appsettings.Development.json.example
+# Copy that to appsettings.Development.json on a fresh clone and fill in the key.
+appsettings.Development.json
+
+# User secrets fallback (if a secrets file is ever kept in-tree)
+secrets.json

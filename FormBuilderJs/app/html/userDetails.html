@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>User Details</title>
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootswatch@4.6.2/dist/flatly/bootstrap.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="../css/builder.css">
+    <link rel="stylesheet" href="../css/userProfile.css">
+    <link rel="stylesheet" href="../css/userDetails.css">
+
+    <!-- Page guard: requires a signed-in session before this page renders. -->
+    <script src="../js/auth.js"></script>
+</head>
+<body>
+
+<div class="menu-overlay" id="menuOverlay"></div>
+
+<!-- Navigation Header -->
+<div class="profile-nav">
+    <button class="menu-btn" id="menuBtn" onclick="toggleMenu()">
+        <i class="bi bi-list"></i>
+    </button>
+    <h2>User Details</h2>
+</div>
+
+<!-- Tabs Navigation -->
+<div style="display: flex; justify-content: center;">
+    <div class="tabs-container" style="max-width: 1100px;">
+        <a href="userProfile.html" class="tab-link">User Profile</a>
+        <!-- <a href="login.html" class="tab-link">Admin Settings</a> -->
+        <a href="userDetails.html" class="tab-link active">User Details</a>
+    </div>
+</div>
+
+<!-- Main Centered Layout Wrapper -->
+<div class="profile-page-container">
+    <div class="wireframe-card">
+        
+        <!-- Controls: Search, Sort, Add Button -->
+        <div class="controls-row">
+            <div class="search-sort-container">
+                <input type="text" id="searchInput" class="search-input" placeholder="Search users..." onkeyup="filterUsers()">
+                <select id="sortSelect" class="sort-select" onchange="sortUsers()">
+                    <option value="">Sort by:</option>
+                    <option value="a-z">A - Z</option>
+                    <option value="z-a">Z - A</option>
+                    <option value="new-old">New - Old</option>
+                    <option value="old-new">Old - New</option>
+                </select>
+            </div>
+            <button class="btn-add-user" onclick="addNewUser()">
+                <i class="bi bi-plus"></i> Add New User
+            </button>
+        </div>
+
+        <!-- Table -->
+        <div class="table-wrapper">
+            <table class="users-table">
+                <thead>
+                    <tr>
+                        <th>Username</th>
+                        <th>Full Name</th>
+                        <th>Role</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody id="usersTableBody">
+                    <!-- Users will be populated here -->
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        <div class="pagination-container" id="paginationContainer">
+            <!-- Pagination buttons will be populated here -->
+        </div>
+        <div class="pagination-info" id="paginationInfo"></div>
+
+    </div>
+</div>
+
+<!-- Edit User Modal -->
+<div class="modal-overlay" id="editModal">
+    <div class="modal-content">
+        <div class="modal-header">Edit Row</div>
+        
+        <div class="modal-form-group">
+            <label class="modal-label">Username:</label>
+            <input type="text" class="modal-input" id="editUsername" placeholder="Enter username">
+        </div>
+
+        <div class="modal-form-group">
+            <label class="modal-label">Full Name:</label>
+            <input type="text" class="modal-input" id="editFullName" placeholder="Enter full name">
+        </div>
+
+        <div class="modal-form-group">
+            <label class="modal-label">Role:</label>
+            <select class="modal-select" id="editRole">
+                <option value="Developer">Developer</option>
+                <option value="Manager">Manager</option>
+                <option value="Analyst">Analyst</option>
+                <option value="Designer">Designer</option>
+                <option value="Admin">Admin</option>
+            </select>
+        </div>
+
+        <div class="modal-buttons">
+            <button class="modal-btn-cancel" onclick="cancelEdit()">Cancel</button>
+            <button class="modal-btn-save" onclick="saveEdit()">Save</button>
+        </div>
+    </div>
+</div>
+
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="../js/CommonItems.js"></script>
+
+<script>
+    const ITEMS_PER_PAGE = 5;
+    let currentPage = 1;
+    let filteredUsers = [];
+    let editingUserId = null;
+
+    // Full users data
+    const allUsers = [
+        { id: 'user_001', username: 'akhila', firstName: 'Akhila', lastName: 'Pillareddy', role: 'Developer', created: '2026-08-13, 10:30 am' },
+        { id: 'admin_001', username: 'admin', firstName: 'Admin', lastName: 'User', role: 'Admin', created: '2026-08-01, 09:15 am' },
+        { id: 'user_002', username: 'john_doe', firstName: 'John', lastName: 'Doe', role: 'Manager', created: '2026-07-20, 02:45 pm' },
+        { id: 'user_003', username: 'sarah_smith', firstName: 'Sarah', lastName: 'Smith', role: 'Developer', created: '2026-07-18, 11:20 am' },
+        { id: 'user_004', username: 'michael_brown', firstName: 'Michael', lastName: 'Brown', role: 'Analyst', created: '2026-07-15, 03:10 pm' },
+        { id: 'user_005', username: 'emily_jones', firstName: 'Emily', lastName: 'Jones', role: 'Designer', created: '2026-07-12, 01:50 pm' },
+        { id: 'user_006', username: 'robert_wilson', firstName: 'Robert', lastName: 'Wilson', role: 'Developer', created: '2026-07-10, 04:30 pm' },
+        { id: 'user_007', username: 'jennifer_davis', firstName: 'Jennifer', lastName: 'Davis', role: 'Manager', created: '2026-07-08, 10:15 am' },
+        { id: 'user_008', username: 'david_miller', firstName: 'David', lastName: 'Miller', role: 'Analyst', created: '2026-07-05, 02:25 pm' },
+        { id: 'user_009', username: 'lisa_anderson', firstName: 'Lisa', lastName: 'Anderson', role: 'Developer', created: '2026-07-01, 11:00 am' },
+        { id: 'user_010', username: 'william_taylor', firstName: 'William', lastName: 'Taylor', role: 'Admin', created: '2026-06-28, 09:45 am' }
+    ];
+
+    function loadUsersTable() {
+        filteredUsers = [...allUsers];
+        currentPage = 1;
+        renderTable();
+    }
+
+    function renderTable() {
+        const tableBody = document.getElementById('usersTableBody');
+        tableBody.innerHTML = '';
+
+        const start = (currentPage - 1) * ITEMS_PER_PAGE;
+        const end = start + ITEMS_PER_PAGE;
+        const pageUsers = filteredUsers.slice(start, end);
+
+        pageUsers.forEach(user => {
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${user.username}</td>
+                <td>${user.firstName} ${user.lastName}</td>
+                <td>${user.role}</td>
+                <td class="actions-cell">
+                    <button class="btn-action btn-edit" onclick="editUser('${user.id}')">
+                        <i class="bi bi-pencil"></i> Edit
+                    </button>
+                    <button class="btn-action btn-delete" onclick="deleteUser('${user.id}')">
+                        <i class="bi bi-trash"></i> Delete
+                    </button>
+                </td>
+            `;
+            tableBody.appendChild(row);
+        });
+
+        renderPagination();
+    }
+
+    function renderPagination() {
+        const totalPages = Math.ceil(filteredUsers.length / ITEMS_PER_PAGE);
+        const paginationContainer = document.getElementById('paginationContainer');
+        const paginationInfo = document.getElementById('paginationInfo');
+        
+        paginationContainer.innerHTML = '';
+
+        for (let i = 1; i <= totalPages; i++) {
+            const btn = document.createElement('button');
+            btn.className = `pagination-btn ${i === currentPage ? 'active' : ''}`;
+            btn.textContent = i;
+            btn.onclick = () => {
+                currentPage = i;
+                renderTable();
+            };
+            paginationContainer.appendChild(btn);
+        }
+
+        const start = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+        const end = Math.min(currentPage * ITEMS_PER_PAGE, filteredUsers.length);
+        paginationInfo.textContent = `Showing ${start} to ${end} of ${filteredUsers.length} users`;
+    }
+
+    function filterUsers() {
+        const searchTerm = document.getElementById('searchInput').value.toLowerCase();
+        filteredUsers = allUsers.filter(user => 
+            user.firstName.toLowerCase().includes(searchTerm) ||
+            user.lastName.toLowerCase().includes(searchTerm) ||
+            user.username.toLowerCase().includes(searchTerm) ||
+            user.role.toLowerCase().includes(searchTerm)
+        );
+        currentPage = 1;
+        renderTable();
+    }
+
+    function sortUsers() {
+        const sortValue = document.getElementById('sortSelect').value;
+        if (sortValue === 'a-z') {
+            filteredUsers.sort((a, b) => (a.firstName + a.lastName).localeCompare(b.firstName + b.lastName));
+        } else if (sortValue === 'z-a') {
+            filteredUsers.sort((a, b) => (b.firstName + b.lastName).localeCompare(a.firstName + a.lastName));
+        } else if (sortValue === 'new-old') {
+            filteredUsers.sort((a, b) => new Date(b.created) - new Date(a.created));
+        } else if (sortValue === 'old-new') {
+            filteredUsers.sort((a, b) => new Date(a.created) - new Date(b.created));
+        }
+        currentPage = 1;
+        renderTable();
+    }
+
+    function editUser(userId) {
+        const user = allUsers.find(u => u.id === userId);
+        if (user) {
+            editingUserId = userId;
+            document.getElementById('editUsername').value = user.username;
+            document.getElementById('editFullName').value = user.firstName + ' ' + user.lastName;
+            document.getElementById('editRole').value = user.role;
+            document.getElementById('editModal').classList.add('active');
+        }
+    }
+
+    function cancelEdit() {
+        document.getElementById('editModal').classList.remove('active');
+        editingUserId = null;
+    }
+
+    function saveEdit() {
+        if (!editingUserId) return;
+
+        const user = allUsers.find(u => u.id === editingUserId);
+        if (user) {
+            const fullName = document.getElementById('editFullName').value.trim().split(' ');
+            user.username = document.getElementById('editUsername').value.trim();
+            user.firstName = fullName[0] || '';
+            user.lastName = fullName.slice(1).join(' ') || '';
+            user.role = document.getElementById('editRole').value;
+
+            cancelEdit();
+            renderTable();
+        }
+    }
+
+    function deleteUser(userId) {
+        if (confirm('Are you sure you want to delete this user?')) {
+            const index = allUsers.findIndex(u => u.id === userId);
+            if (index > -1) {
+                allUsers.splice(index, 1);
+                filteredUsers = filteredUsers.filter(u => u.id !== userId);
+                currentPage = 1;
+                renderTable();
+            }
+        }
+    }
+
+    function addNewUser() {
+        alert('Add New User - Feature coming soon');
+    }
+
+    // Load table on page load
+    document.addEventListener('DOMContentLoaded', loadUsersTable);
+
+    // Close modal when clicking outside
+    document.getElementById('editModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            cancelEdit();
+        }
+    });
+</script>
+
+</body>
+</html>
