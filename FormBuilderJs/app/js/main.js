@@ -1,4 +1,102 @@
-﻿console.log("Loaded:", Formio);
+﻿/**
+ * Loading overlay gate.
+ * =====================
+ *
+ * Holds #appLoader (markup and styles live in index.html, inlined there so it paints on
+ * the first frame) until every gate below reports in, so the builder is never revealed
+ * half-drawn. Gates call AppLoader.done(name).
+ *
+ * Defined at the very top of this file, before any other statement, so that a failure
+ * further down - a missing Formio, a bad API response - still leaves the overlay with a
+ * working escape hatch rather than stranding the user behind a spinner.
+ */
+window.AppLoader = (function () {
+    'use strict';
+
+    var GATES = ['assets', 'builder'];
+    var LABELS = {
+        assets: 'Loading assets…',
+        builder: 'Preparing workspace…'
+    };
+    var MIN_VISIBLE_MS = 300;
+    var MAX_WAIT_MS = 12000;
+
+    var pending = {};
+    var remaining = GATES.length;
+    var definedAt = Date.now();
+    var finished = false;
+
+    GATES.forEach(function (gate) { pending[gate] = true; });
+
+    /**
+     * Milliseconds since the navigation started - not since this file ran. main.js is the
+     * last script on the page, so the two are far apart, and it is the page's age that
+     * decides whether the overlay would flash by on a warm cache.
+     */
+    function pageAge() {
+        if (window.performance && typeof performance.now === 'function') {
+            return performance.now();
+        }
+        return Date.now() - definedAt;
+    }
+
+    function paint() {
+        var bar = document.getElementById('appLoaderBar');
+        var status = document.getElementById('appLoaderStatus');
+        var label = 'Ready';
+
+        for (var i = 0; i < GATES.length; i++) {
+            if (pending[GATES[i]]) { label = LABELS[GATES[i]]; break; }
+        }
+
+        if (bar) bar.style.width = Math.round(((GATES.length - remaining) / GATES.length) * 100) + '%';
+        if (status) status.textContent = label;
+    }
+
+    function dismiss() {
+        var overlay = document.getElementById('appLoader');
+        if (!overlay) return;
+
+        overlay.classList.add('is-hidden');
+        setTimeout(function () {
+            if (overlay.parentNode) overlay.parentNode.removeChild(overlay);
+        }, 280);
+    }
+
+    function finish() {
+        if (finished) return;
+        finished = true;
+        paint();
+
+        // Let the bar visibly reach 100%, and never flash by on a warm cache.
+        setTimeout(dismiss, Math.max(120, MIN_VISIBLE_MS - pageAge()));
+    }
+
+    function done(gate) {
+        if (finished || !pending[gate]) return;
+
+        delete pending[gate];
+        remaining--;
+        paint();
+
+        if (remaining <= 0) finish();
+    }
+
+    if (document.readyState === 'complete') {
+        done('assets');
+    } else {
+        window.addEventListener('load', function () { done('assets'); });
+    }
+
+    // Never trap the user behind the overlay if a gate never reports.
+    setTimeout(function () {
+        GATES.forEach(function (gate) { done(gate); });
+    }, MAX_WAIT_MS);
+
+    return { done: done };
+})();
+
+console.log("Loaded:", Formio);
 
 // Initialize Bootstrap tooltips
 $(function() {
@@ -693,11 +791,14 @@ loadFormJsonIntoBuilder(initialFormSchema)
                 }
             });
         }
+
+        if (window.AppLoader) AppLoader.done('builder');
     }, 200);
 
 })
 .catch(function(error) {
     console.error('Error loading builder:', error);
+    if (window.AppLoader) AppLoader.done('builder');
     alert('Error loading form builder');
 });
 

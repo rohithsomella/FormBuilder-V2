@@ -24,8 +24,26 @@ href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.m
 
     <!-- Page guard: requires a signed-in session before this page renders. -->
     <script src="../js/auth.js"></script>
+
+    <!--
+      Loading overlay: markup is at the top of <body>, styles are in ../styles.css,
+      and the gate logic that decides when to lift it is in AppLoader, at the top of
+      ../js/main.js.
+    -->
 </head>
 <body>
+
+<div id="appLoader">
+    <div class="app-loader__spinner">
+        <div class="app-loader__ring"></div>
+        <div class="app-loader__ring app-loader__ring--inner"></div>
+    </div>
+    <div class="app-loader__title">FORM BUILDER</div>
+    <div class="app-loader__status" id="appLoaderStatus">Loading assets&hellip;</div>
+    <div class="app-loader__track">
+        <div class="app-loader__bar" id="appLoaderBar"></div>
+    </div>
+</div>
 
 <div class="menu-overlay" id="menuOverlay"></div>
 
