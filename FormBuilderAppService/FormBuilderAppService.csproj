@@ -29,6 +29,23 @@
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+
+    <!--
+      Supplies the Package Manager Console cmdlets (Update-Database, Add-Migration,
+      Get-Migrations). Without it those commands do not exist in Visual Studio and
+      migrations can only be run from the CLI with "dotnet ef".
+
+      Both routes drive the same migrations in FormBuilderAppService/Migrations.
+      In the Package Manager Console set "Default project" to FormBuilderAppService,
+      then run Update-Database.
+
+      PrivateAssets=all keeps it a build-time-only dependency, so it is never published.
+    -->
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.11">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.11" />
   </ItemGroup>
 

@@ -151,12 +151,49 @@ builder.Services.AddPdfRenderer(builder.Configuration);
 
 var app = builder.Build();
 
-// Create the Admin/User roles and any configured seed accounts. Runs before the app
-// starts serving so a fresh database is immediately loginable.
+// Bring the Identity schema up to date, then ensure the roles and seed accounts exist.
+// Both run before the app serves a request, so a fresh database is immediately usable.
+//
+// Database.MigrateAsync() applies whatever migrations the database is missing and does
+// nothing when it is already current. That makes the AspNet* tables create-if-not-exist
+// on startup: a new machine only has to point at a database and run - no separate
+// "Update-Database" or "dotnet ef database update" step. It runs exactly the same
+// migrations from FormBuilderAppService/Migrations, so the schema is identical either
+// way, and running the CLI/PMC commands by hand still works.
 using (var scope = app.Services.CreateScope())
 {
-    var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
-    await seeder.SeedAsync();
+    var logger = scope.ServiceProvider.GetRequiredService<ILogger<Program>>();
+
+    try
+    {
+        var db = scope.ServiceProvider.GetRequiredService<AppIdentityDbContext>();
+
+        var pending = (await db.Database.GetPendingMigrationsAsync()).ToList();
+        if (pending.Count > 0)
+        {
+            logger.LogInformation(
+                "Applying {Count} Identity migration(s): {Migrations}",
+                pending.Count, string.Join(", ", pending));
+
+            await db.Database.MigrateAsync();
+
+            logger.LogInformation("Identity schema is up to date.");
+        }
+
+        var seeder = scope.ServiceProvider.GetRequiredService<IdentitySeeder>();
+        await seeder.SeedAsync();
+    }
+    catch (Exception ex)
+    {
+        // An unreachable database must not stop the whole API from starting. Token
+        // validation needs no database at all, and the MongoDB-backed endpoints are
+        // unaffected, so the rest of the application still works. Logins will fail
+        // until SQL Server is reachable - which this log makes obvious, instead of the
+        // process dying at startup with an unhandled SqlException.
+        logger.LogError(ex,
+            "Identity database setup failed. Check ConnectionStrings:PracticeDB. " +
+            "Authentication will not work until this is resolved.");
+    }
 }
 
 // Configure the HTTP request pipeline.
