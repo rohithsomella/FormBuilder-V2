@@ -21,3 +21,6 @@ appsettings.Development.json
 
 # User secrets fallback (if a secrets file is ever kept in-tree)
 secrets.json
+
+# Claude Code local settings (machine-specific; settings.json may be shared if wanted)
+.claude/settings.local.json
