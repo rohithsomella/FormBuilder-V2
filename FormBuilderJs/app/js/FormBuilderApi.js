@@ -11,6 +11,7 @@ var FormBuilderApi = (function() {
     var config = {
         baseUrl: 'http://localhost:5155/api/forms',
         tenantBaseUrl: 'http://localhost:5155/api/tenant',
+        userBaseUrl: 'http://localhost:5155/api/users',
         contentType: 'application/json'
     };
 
@@ -217,6 +218,186 @@ var FormBuilderApi = (function() {
         });
     }
 
+
+    // ------------------------------------------------------------------ users
+    //
+    // Every endpoint below is [Authorize(Roles = "Admin")] on the API. The bearer token
+    // is attached by the $.ajaxPrefilter in auth.js, so nothing here handles it - and a
+    // non-admin gets a 403 from the server no matter what the page let them click.
+
+    /**
+     * Get every user account for the User Details table
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function getUsers(onSuccess, onError) {
+        console.log('Fetching users from:', config.userBaseUrl);
+
+        $.ajax({
+            url: config.userBaseUrl,
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function (response) {
+                console.log('Users retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr, status, error) {
+                console.error('Error retrieving users:', error);
+
+                var errorMessage = 'Error retrieving users';
+
+                if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server at ' + config.userBaseUrl + '. Make sure the backend is running.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'You do not have permission to view users.';
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Get the roles an admin may assign when creating a user
+     * @param {Function} onSuccess - Callback function on success
+     * @param {Function} onError - Callback function on error
+     */
+    function getAssignableRoles(onSuccess, onError) {
+        $.ajax({
+            url: config.userBaseUrl + '/roles',
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function (response) {
+                console.log('Assignable roles retrieved successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error retrieving roles');
+
+                var errorMessage = 'Error retrieving roles';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Check whether a username is free - backs the "Verify" button in the Add User dialog
+     * @param {string} userName - The username to check
+     * @param {Function} onSuccess - Callback receiving { userName, isAvailable, message }
+     * @param {Function} onError - Callback function on error
+     */
+    function checkUserName(userName, onSuccess, onError) {
+        if (!userName) {
+            console.error('Username is required for verification');
+            if (onError) {
+                onError('Username is required', 400);
+            }
+            return;
+        }
+
+        $.ajax({
+            url: config.userBaseUrl + '/username-availability?userName=' + encodeURIComponent(userName),
+            type: 'GET',
+            contentType: config.contentType,
+            dataType: 'json',
+            success: function (response) {
+                console.log('Username availability:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error checking username availability');
+
+                var errorMessage = 'Error checking username';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Create a user account
+     *
+     * The response carries a one-time temporaryPassword. It is generated by the API and
+     * stored only as a hash, so this response is the only chance to read it - the caller
+     * must show it to the admin before the dialog closes.
+     *
+     * @param {Object} userData - { firstName, lastName, userName, email, roles: [] }
+     * @param {Function} onSuccess - Callback receiving { user, temporaryPassword }
+     * @param {Function} onError - Callback function on error
+     */
+    function createUser(userData, onSuccess, onError) {
+        if (!userData) {
+            console.error('User data is required');
+            if (onError) {
+                onError('User data is required', 400);
+            }
+            return;
+        }
+
+        var payload = {
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            userName: userData.userName || '',
+            email: userData.email || '',
+            roles: userData.roles || []
+        };
+
+        $.ajax({
+            url: config.userBaseUrl,
+            type: 'POST',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            success: function (response) {
+                console.log('User created successfully:', response && response.user);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error creating user');
+
+                var errorMessage = 'Error creating user';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 403) {
+                    errorMessage = 'You do not have permission to create users.';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
 
     //  * Get all forms
     //  * @param {Function} onSuccess - Callback function on success
@@ -1663,6 +1844,10 @@ function displayPaginatedForms() {
         updateTenant: updateTenant,
         getFormsByTenantId: getFormsByTenantId,
         deleteTenant: deleteTenant,
+        getUsers: getUsers,
+        getAssignableRoles: getAssignableRoles,
+        checkUserName: checkUserName,
+        createUser: createUser,
         getFormById: getFormById,
         saveForm: saveForm,
         updateForm: updateForm,
