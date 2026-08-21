@@ -22,6 +22,12 @@ namespace FormBuilderAppService.Data
     /// </summary>
     public class IdentitySeeder
     {
+        /// <summary>
+        /// Recorded in CreatedBy/UpdatedBy for anything seeding creates. Seeding runs
+        /// before any request, so there is no signed-in admin to attribute it to.
+        /// </summary>
+        private const string SeedActor = "System";
+
         private readonly UserManager<ApplicationUser> _userManager;
         private readonly RoleManager<ApplicationRole> _roleManager;
         private readonly IdentitySeedSettings _seedSettings;
@@ -68,7 +74,13 @@ namespace FormBuilderAppService.Data
                     continue;
                 }
 
-                var result = await _roleManager.CreateAsync(new ApplicationRole(roleName));
+                var result = await _roleManager.CreateAsync(new ApplicationRole(roleName)
+                {
+                    // Nobody is signed in during startup seeding, so the audit columns
+                    // record "System" rather than being left blank.
+                    CreatedBy = SeedActor,
+                    UpdatedBy = SeedActor
+                });
 
                 if (result.Succeeded)
                 {
@@ -110,11 +122,24 @@ namespace FormBuilderAppService.Data
                 return;
             }
 
+            // A seed entry supplies one FullName, but AspNetUsers now carries the two
+            // parts separately for the User Details table. Splitting here keeps a seeded
+            // account indistinguishable from one created through the admin dialog.
+            var nameParts = (seedUser.FullName ?? string.Empty)
+                .Split(' ', StringSplitOptions.RemoveEmptyEntries);
+
             var user = new ApplicationUser
             {
                 UserName = seedUser.UserName,
                 Email = seedUser.Email,
                 FullName = seedUser.FullName,
+                FirstName = nameParts.FirstOrDefault(),
+                LastName = nameParts.Length > 1 ? string.Join(' ', nameParts.Skip(1)) : null,
+
+                CreatedBy = SeedActor,
+                UpdatedBy = SeedActor,
+                IsDeleted = false,
+                IsActive = true,
 
                 // Seeded accounts skip the confirmation flow; there is no mail sender in V1.
                 EmailConfirmed = true

@@ -115,8 +115,102 @@
     </div>
 </div>
 
+<!--
+    Add New User Modal.
+
+    Two faces in one dialog: the form, and - once the account exists - the generated
+    password. The second one is not a nicety: the API stores only the hash, so that
+    screen is the only place the password is ever readable.
+
+    All of its behaviour lives in js/userDetailsHandler.js.
+-->
+<div class="modal-overlay" id="addUserModal">
+    <div class="modal-content">
+
+        <!-- Face 1: the form -->
+        <div id="addUserFormSection">
+            <div class="modal-header">Add New User</div>
+
+            <div class="modal-error" id="addUserError" style="display: none;"></div>
+
+            <div class="modal-form-group">
+                <label class="modal-label" for="addUserFirstName">First Name:</label>
+                <input type="text" class="modal-input" id="addUserFirstName" placeholder="Enter first name" autocomplete="off">
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label" for="addUserLastName">Last Name:</label>
+                <input type="text" class="modal-input" id="addUserLastName" placeholder="Enter last name" autocomplete="off">
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label" for="addUserUserName">Username:</label>
+                <div class="input-with-button">
+                    <input type="text" class="modal-input" id="addUserUserName" placeholder="Enter username" autocomplete="off">
+                    <button type="button" class="btn-verify" id="btnVerifyUserName">Verify</button>
+                </div>
+                <div class="username-feedback" id="userNameFeedback"></div>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label" for="addUserEmail">Email:</label>
+                <input type="email" class="modal-input" id="addUserEmail" placeholder="Enter email address" autocomplete="off">
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Role:</label>
+                <!-- Multi-select: an account can hold more than one role at a time. -->
+                <div class="role-dropdown" id="roleDropdown">
+                    <button type="button" class="role-dropdown-toggle" id="roleDropdownToggle">
+                        <span class="role-dropdown-label placeholder" id="roleDropdownLabel">Select role(s)</span>
+                        <i class="bi bi-chevron-down"></i>
+                    </button>
+                    <!-- Options are fetched from GET /api/users/roles, never hard-coded here. -->
+                    <div class="role-dropdown-menu" id="roleDropdownMenu"></div>
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn-cancel" id="btnCancelAddUser">Cancel</button>
+                <button class="modal-btn-save" id="btnSaveNewUser">Save</button>
+            </div>
+        </div>
+
+        <!-- Face 2: the one-time password -->
+        <div id="newUserPasswordSection" style="display: none;">
+            <div class="modal-header">User Created</div>
+
+            <div class="new-user-summary">
+                <div><span>Name</span><strong id="newUserSummaryName"></strong></div>
+                <div><span>Username</span><strong id="newUserSummaryUserName"></strong></div>
+                <div><span>Email</span><strong id="newUserSummaryEmail"></strong></div>
+                <div><span>Role(s)</span><strong id="newUserSummaryRoles"></strong></div>
+            </div>
+
+            <div class="modal-form-group">
+                <label class="modal-label">Temporary Password:</label>
+                <div class="password-reveal">
+                    <code id="newUserPasswordValue"></code>
+                    <button type="button" class="btn-verify" id="btnCopyNewUserPassword">Copy</button>
+                </div>
+                <div class="password-warning">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    Copy this now - it is stored only as a hash and cannot be shown again.
+                </div>
+            </div>
+
+            <div class="modal-buttons">
+                <button class="modal-btn-save" id="btnCloseNewUserPassword">Done</button>
+            </div>
+        </div>
+
+    </div>
+</div>
+
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
 <script src="../js/CommonItems.js"></script>
+<script src="../js/FormBuilderApi.js"></script>
+<script src="../js/userDetailsHandler.js"></script>
 
 <script>
     const ITEMS_PER_PAGE = 5;
@@ -124,25 +218,66 @@
     let filteredUsers = [];
     let editingUserId = null;
 
-    // Full users data
-    const allUsers = [
-        { id: 'user_001', username: 'akhila', firstName: 'Akhila', lastName: 'Pillareddy', role: 'Developer', created: '2026-08-13, 10:30 am' },
-        { id: 'admin_001', username: 'admin', firstName: 'Admin', lastName: 'User', role: 'Admin', created: '2026-08-01, 09:15 am' },
-        { id: 'user_002', username: 'john_doe', firstName: 'John', lastName: 'Doe', role: 'Manager', created: '2026-07-20, 02:45 pm' },
-        { id: 'user_003', username: 'sarah_smith', firstName: 'Sarah', lastName: 'Smith', role: 'Developer', created: '2026-07-18, 11:20 am' },
-        { id: 'user_004', username: 'michael_brown', firstName: 'Michael', lastName: 'Brown', role: 'Analyst', created: '2026-07-15, 03:10 pm' },
-        { id: 'user_005', username: 'emily_jones', firstName: 'Emily', lastName: 'Jones', role: 'Designer', created: '2026-07-12, 01:50 pm' },
-        { id: 'user_006', username: 'robert_wilson', firstName: 'Robert', lastName: 'Wilson', role: 'Developer', created: '2026-07-10, 04:30 pm' },
-        { id: 'user_007', username: 'jennifer_davis', firstName: 'Jennifer', lastName: 'Davis', role: 'Manager', created: '2026-07-08, 10:15 am' },
-        { id: 'user_008', username: 'david_miller', firstName: 'David', lastName: 'Miller', role: 'Analyst', created: '2026-07-05, 02:25 pm' },
-        { id: 'user_009', username: 'lisa_anderson', firstName: 'Lisa', lastName: 'Anderson', role: 'Developer', created: '2026-07-01, 11:00 am' },
-        { id: 'user_010', username: 'william_taylor', firstName: 'William', lastName: 'Taylor', role: 'Admin', created: '2026-06-28, 09:45 am' }
-    ];
+    // Rows come from GET /api/users (AspNetUsers). This is the loaded copy the table
+    // renders, searches and sorts against, and it is replaced wholesale on every reload.
+    let allUsers = [];
 
     function loadUsersTable() {
-        filteredUsers = [...allUsers];
-        currentPage = 1;
-        renderTable();
+        showTableMessage('Loading users...');
+
+        FormBuilderApi.getUsers(
+            function (users) {
+                allUsers = (users || []).map(toTableRow);
+                filteredUsers = [...allUsers];
+                currentPage = 1;
+
+                if (!allUsers.length) {
+                    showTableMessage('No users found');
+                    return;
+                }
+
+                renderTable();
+            },
+            function (error) {
+                allUsers = [];
+                filteredUsers = [];
+                showTableMessage(error, true);
+            }
+        );
+    }
+
+    /**
+     * The API's user shape mapped onto what this table already renders. `role` is a
+     * joined list because an account can now hold more than one.
+     */
+    function toTableRow(user) {
+        return {
+            id: user.userId,
+            username: user.userName,
+            firstName: user.firstName || '',
+            lastName: user.lastName || '',
+            email: user.email || '',
+            role: (user.roles || []).join(', '),
+            created: user.created
+        };
+    }
+
+    function showTableMessage(message, isError) {
+        const tableBody = document.getElementById('usersTableBody');
+        tableBody.innerHTML =
+            `<tr><td colspan="4" class="table-message${isError ? ' error' : ''}">${escapeHtml(message)}</td></tr>`;
+
+        document.getElementById('paginationContainer').innerHTML = '';
+        document.getElementById('paginationInfo').textContent = '';
+    }
+
+    /**
+     * These rows are real account data now, not a fixed demo array, so anything
+     * interpolated into the table's HTML has to be escaped first.
+     */
+    function escapeHtml(text) {
+        const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+        return String(text == null ? '' : text).replace(/[&<>"']/g, m => map[m]);
     }
 
     function renderTable() {
@@ -156,14 +291,14 @@
         pageUsers.forEach(user => {
             const row = document.createElement('tr');
             row.innerHTML = `
-                <td>${user.username}</td>
-                <td>${user.firstName} ${user.lastName}</td>
-                <td>${user.role}</td>
+                <td>${escapeHtml(user.username)}</td>
+                <td>${escapeHtml((user.firstName + ' ' + user.lastName).trim())}</td>
+                <td>${escapeHtml(user.role)}</td>
                 <td class="actions-cell">
-                    <button class="btn-action btn-edit" onclick="editUser('${user.id}')">
+                    <button class="btn-action btn-edit" onclick="editUser('${escapeHtml(user.id)}')">
                         <i class="bi bi-pencil"></i> Edit
                     </button>
-                    <button class="btn-action btn-delete" onclick="deleteUser('${user.id}')">
+                    <button class="btn-action btn-delete" onclick="deleteUser('${escapeHtml(user.id)}')">
                         <i class="bi bi-trash"></i> Delete
                     </button>
                 </td>
@@ -269,11 +404,17 @@
     }
 
     function addNewUser() {
-        alert('Add New User - Feature coming soon');
+        UserDetailsHandler.openAddUserDialog();
     }
 
     // Load table on page load
-    document.addEventListener('DOMContentLoaded', loadUsersTable);
+    document.addEventListener('DOMContentLoaded', function () {
+        // The dialog reloads the table itself once an account has been created, so a
+        // new user appears without the admin having to refresh.
+        UserDetailsHandler.init({ onUserCreated: loadUsersTable });
+
+        loadUsersTable();
+    });
 
     // Close modal when clicking outside
     document.getElementById('editModal').addEventListener('click', function(e) {

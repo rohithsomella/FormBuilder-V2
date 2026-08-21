@@ -28,12 +28,18 @@ namespace FormBuilderAppService.Data
 
             builder.Entity<ApplicationUser>(entity =>
             {
+                entity.Property(u => u.FirstName).HasMaxLength(100);
+                entity.Property(u => u.LastName).HasMaxLength(100);
                 entity.Property(u => u.FullName).HasMaxLength(200);
+                entity.Property(u => u.CreatedBy).HasMaxLength(200);
+                entity.Property(u => u.UpdatedBy).HasMaxLength(200);
             });
 
             builder.Entity<ApplicationRole>(entity =>
             {
                 entity.Property(r => r.Description).HasMaxLength(500);
+                entity.Property(r => r.CreatedBy).HasMaxLength(200);
+                entity.Property(r => r.UpdatedBy).HasMaxLength(200);
             });
         }
     }
