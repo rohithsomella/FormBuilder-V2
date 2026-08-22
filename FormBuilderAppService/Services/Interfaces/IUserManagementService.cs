@@ -19,8 +19,8 @@ namespace FormBuilderAppService.Services.Interfaces
         Task<List<UserListItemDto>> GetUsersAsync();
 
         /// <summary>
-        /// The roles the dialog may offer. Intersection of the roles the application
-        /// defines and the roles that actually exist in AspNetRoles.
+        /// The roles the dialog may offer: every non-deleted row in AspNetRoles. Roles
+        /// are data, not a compiled list, so one added by SQL is assignable immediately.
         /// </summary>
         Task<List<RoleOptionDto>> GetAssignableRolesAsync();
 

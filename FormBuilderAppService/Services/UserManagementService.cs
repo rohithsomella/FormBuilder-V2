@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Text.RegularExpressions;
-using FormBuilderAppService.Models.DTOs.Auth;
 using FormBuilderAppService.Models.DTOs.Users;
 using FormBuilderAppService.Models.Identity;
 using FormBuilderAppService.Repositories.Interfaces;
@@ -51,23 +50,19 @@ namespace FormBuilderAppService.Services
 
         public async Task<List<RoleOptionDto>> GetAssignableRolesAsync()
         {
+            // AspNetRoles is the source of truth, not a list compiled into the assembly:
+            // a role added by SQL shows up here with no rebuild, and one that is
+            // soft-deleted disappears (GetRolesAsync already filters IsDeleted).
+            // Ordered by name so the dropdown is stable between calls.
             var existingRoles = await _userRepository.GetRolesAsync();
 
-            // Driven by RoleNames.All rather than by whatever happens to be in the table,
-            // so the dropdown lists the roles in a stable, intended order and never
-            // offers a stray row somebody added to AspNetRoles by hand.
-            return RoleNames.All
-                .Select(roleName => new
+            return existingRoles
+                .Where(role => !string.IsNullOrWhiteSpace(role.Name))
+                .OrderBy(role => role.Name)
+                .Select(role => new RoleOptionDto
                 {
-                    Name = roleName,
-                    Match = existingRoles.FirstOrDefault(
-                        r => string.Equals(r.Name, roleName, StringComparison.OrdinalIgnoreCase))
-                })
-                .Where(entry => entry.Match is not null)
-                .Select(entry => new RoleOptionDto
-                {
-                    Name = entry.Name,
-                    Description = entry.Match!.Description
+                    Name = role.Name!,
+                    Description = role.Description
                 })
                 .ToList();
         }
@@ -147,7 +142,15 @@ namespace FormBuilderAppService.Services
                 errors.Add($"'{email}' is not a valid email address.");
             }
 
-            var roles = NormalizeRoles(request.Roles, errors);
+            // Loaded per request rather than cached: an admin who inserts a role in SQL
+            // can assign it on the next call, without restarting the API.
+            var assignableRoles = (await _userRepository.GetRolesAsync())
+                .Select(role => role.Name)
+                .Where(name => !string.IsNullOrWhiteSpace(name))
+                .Select(name => name!)
+                .ToList();
+
+            var roles = ResolveRoles(request.Roles, assignableRoles, errors);
 
             if (errors.Count > 0)
             {
@@ -237,31 +240,43 @@ namespace FormBuilderAppService.Services
         }
 
         /// <summary>
-        /// Maps the submitted role names onto the canonical ones and rejects anything
-        /// unrecognised. This is what stops a hand-crafted request from assigning a role
-        /// the application does not define.
+        /// Matches the submitted role names against the roles that actually exist in
+        /// AspNetRoles and rejects anything else. This is what stops a hand-crafted
+        /// request from assigning a role nobody defined - the check is against the
+        /// table rather than a compiled list, so it covers roles added by SQL too.
+        ///
+        /// Matching is case-insensitive and returns the spelling stored in the table,
+        /// so "dev" and "DEV" both resolve to whatever AspNetRoles actually holds.
         /// </summary>
-        private static List<string> NormalizeRoles(IEnumerable<string>? requestedRoles, List<string> errors)
+        private static List<string> ResolveRoles(
+            IEnumerable<string>? requestedRoles,
+            IReadOnlyCollection<string> assignableRoles,
+            List<string> errors)
         {
             var roles = new List<string>();
+            var sawUnknownRole = false;
 
             foreach (var requested in requestedRoles ?? Enumerable.Empty<string>())
             {
-                var normalized = RoleNames.Normalize(requested);
+                var match = assignableRoles.FirstOrDefault(
+                    r => string.Equals(r, requested?.Trim(), StringComparison.OrdinalIgnoreCase));
 
-                if (normalized is null)
+                if (match is null)
                 {
                     errors.Add($"'{requested}' is not a valid role.");
+                    sawUnknownRole = true;
                     continue;
                 }
 
-                if (!roles.Contains(normalized))
+                if (!roles.Contains(match))
                 {
-                    roles.Add(normalized);
+                    roles.Add(match);
                 }
             }
 
-            if (roles.Count == 0 && !errors.Any(e => e.EndsWith("is not a valid role.")))
+            // "Select at least one role" would be misleading on a request that did pick
+            // roles and simply got the names wrong - it has already been told that.
+            if (roles.Count == 0 && !sawUnknownRole)
             {
                 errors.Add("At least one role must be selected.");
             }

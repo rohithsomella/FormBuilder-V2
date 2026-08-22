@@ -4,7 +4,7 @@ namespace FormBuilderAppService.Models.DTOs.Users
 {
     /// <summary>
     /// What the "Add New User" dialog sends. Roles is a list because the dialog is a
-    /// multi-select: an account can be an Admin and a Dev at the same time.
+    /// multi-select: an account can hold several roles at once.
     ///
     /// No password field. The API generates one (see <see cref="CreateUserResponse"/>),
     /// so a password is never typed into a form, never sent over the wire on the way in,
@@ -74,8 +74,9 @@ namespace FormBuilderAppService.Models.DTOs.Users
     }
 
     /// <summary>
-    /// A role the dialog offers in its dropdown. Sourced from <see cref="RoleNames.All"/>
-    /// via AspNetRoles, so the dropdown can never offer something the API would reject.
+    /// A role the dialog offers in its dropdown. Read straight from AspNetRoles, so the
+    /// dropdown can never offer something the API would reject - and a role added by
+    /// SQL appears without a rebuild.
     /// </summary>
     public class RoleOptionDto
     {

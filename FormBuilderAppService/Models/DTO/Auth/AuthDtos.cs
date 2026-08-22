@@ -55,35 +55,30 @@ namespace FormBuilderAppService.Models.DTOs.Auth
     }
 
     /// <summary>
-    /// The roles the application knows about. Constants rather than literals so a typo in
-    /// an [Authorize(Roles = ...)] attribute is a compile error, not a silent 403.
+    /// The roles C# refers to by name. Constants rather than literals so a typo in an
+    /// [Authorize(Roles = ...)] attribute is a compile error, not a silent 403.
     ///
-    /// This list is also the single source of truth for what an admin may assign when
-    /// creating a user, and IdentitySeeder creates every name here in AspNetRoles on
-    /// startup - so adding a role is a one-line change and needs no migration.
+    /// A role belongs here ONLY if code names it: "Admin" is referenced by
+    /// [Authorize(Roles = RoleNames.Admin)] and by CurrentUserDto.IsAdmin. Every other
+    /// role lives purely as a row in AspNetRoles and is never mentioned in C#. Those
+    /// still work everywhere it matters: the JWT's role claims are built from
+    /// AspNetUserRoles, so authorization, /api/auth/me and the User Details table all
+    /// resolve them without any constant.
+    ///
+    /// This is NOT the list of roles that may be assigned. That comes from AspNetRoles
+    /// (see UserManagementService), so a new role is an INSERT rather than a rebuild.
+    /// All exists only so IdentitySeeder can guarantee the roles the code depends on
+    /// exist on a fresh database.
     /// </summary>
     public static class RoleNames
     {
         public const string Admin = "Admin";
         public const string User = "User";
-        public const string Dev = "Dev";
-
-        public static readonly string[] All = { Admin, User, Dev };
 
         /// <summary>
-        /// Resolves a role name the client sent to its canonical spelling, so "admin"
-        /// and "ADMIN" both map to "Admin". Returns null for anything not in All - which
-        /// is what stops a request from inventing a role.
+        /// Roles the seeder creates if missing, because C# depends on them existing.
+        /// Anything else is expected to be inserted into AspNetRoles directly.
         /// </summary>
-        public static string? Normalize(string? roleName)
-        {
-            if (string.IsNullOrWhiteSpace(roleName))
-            {
-                return null;
-            }
-
-            return All.FirstOrDefault(
-                r => string.Equals(r, roleName.Trim(), StringComparison.OrdinalIgnoreCase));
-        }
+        public static readonly string[] All = { Admin, User };
     }
 }

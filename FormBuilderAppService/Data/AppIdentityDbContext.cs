@@ -26,6 +26,21 @@ namespace FormBuilderAppService.Data
         {
             base.OnModelCreating(builder);
 
+            //
+            // Created/Updated carry a SYSDATETIME() default so a row can be INSERTed by
+            // hand - a SQL script adding a role, for instance - without naming them.
+            // The columns are NOT NULL, so without a default such a script fails.
+            //
+            // Declared on the model rather than as raw SQL in a migration on purpose: a
+            // default that exists only in a migration is invisible to the snapshot, and
+            // the next AlterColumn silently drops it. That is exactly how these
+            // constraints were lost before.
+            //
+            // This does not change what the application writes. EF only falls back to
+            // the database default when the property still holds default(DateTime), and
+            // both properties are initialised to DateTime.Now, so EF always sends its
+            // own value. SYSDATETIME() (local, like DateTime.Now) rather than
+            // SYSUTCDATETIME() keeps hand-inserted rows consistent with the rest.
             builder.Entity<ApplicationUser>(entity =>
             {
                 entity.Property(u => u.FirstName).HasMaxLength(100);
@@ -33,6 +48,8 @@ namespace FormBuilderAppService.Data
                 entity.Property(u => u.FullName).HasMaxLength(200);
                 entity.Property(u => u.CreatedBy).HasMaxLength(200);
                 entity.Property(u => u.UpdatedBy).HasMaxLength(200);
+                entity.Property(u => u.Created).HasDefaultValueSql("SYSDATETIME()");
+                entity.Property(u => u.Updated).HasDefaultValueSql("SYSDATETIME()");
             });
 
             builder.Entity<ApplicationRole>(entity =>
@@ -40,6 +57,8 @@ namespace FormBuilderAppService.Data
                 entity.Property(r => r.Description).HasMaxLength(500);
                 entity.Property(r => r.CreatedBy).HasMaxLength(200);
                 entity.Property(r => r.UpdatedBy).HasMaxLength(200);
+                entity.Property(r => r.Created).HasDefaultValueSql("SYSDATETIME()");
+                entity.Property(r => r.Updated).HasDefaultValueSql("SYSDATETIME()");
             });
         }
     }

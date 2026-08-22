@@ -33,7 +33,9 @@ namespace FormBuilderAppService.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(200)
@@ -55,7 +57,9 @@ namespace FormBuilderAppService.Migrations
                         .HasColumnType("nvarchar(256)");
 
                     b.Property<DateTime>("Updated")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
 
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(200)
@@ -85,7 +89,9 @@ namespace FormBuilderAppService.Migrations
                         .HasColumnType("nvarchar(max)");
 
                     b.Property<DateTime>("Created")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
 
                     b.Property<string>("CreatedBy")
                         .HasMaxLength(200)
@@ -146,7 +152,9 @@ namespace FormBuilderAppService.Migrations
                         .HasColumnType("bit");
 
                     b.Property<DateTime>("Updated")
-                        .HasColumnType("datetime2");
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("datetime2")
+                        .HasDefaultValueSql("SYSDATETIME()");
 
                     b.Property<string>("UpdatedBy")
                         .HasMaxLength(200)
