@@ -103,6 +103,34 @@ builder.Services
 
 var jwtSettings = builder.Configuration.GetSection("Jwt").Get<JwtSettings>() ?? new JwtSettings();
 
+// Fail here, before the application starts serving, if the signing key is missing or
+// too short.
+//
+// JwtTokenService performs the same two checks in its constructor, but it is registered
+// AddScoped: that constructor does not run until the first login request, and because
+// the service is resolved while the controller is being activated, the try/catch inside
+// AuthController.Login never sees the exception. The SymmetricSecurityKey built below
+// has the same problem from the other direction - it throws on a zero-length key the
+// first time a token is validated, not at startup.
+//
+// The result without this block is the worst kind of failure: appsettings.json ships
+// SecretKey = "" by design, so a deployment that forgets JWT__SECRETKEY starts cleanly,
+// reports itself healthy, and then answers every login and every authenticated request
+// with an unexplained 500. Crashing at startup makes the cause impossible to miss.
+if (string.IsNullOrWhiteSpace(jwtSettings.SecretKey))
+{
+    throw new InvalidOperationException(
+        "Jwt:SecretKey is not configured. Set it in appsettings.Development.json, " +
+        "user-secrets, or the JWT__SECRETKEY environment variable.");
+}
+
+if (Encoding.UTF8.GetByteCount(jwtSettings.SecretKey) < JwtTokenService.MinimumSecretKeyBytes)
+{
+    throw new InvalidOperationException(
+        $"Jwt:SecretKey must be at least {JwtTokenService.MinimumSecretKeyBytes} bytes " +
+        "(32 ASCII characters) to sign tokens with HMAC-SHA256.");
+}
+
 builder.Services
     .AddAuthentication(options =>
     {
@@ -114,8 +142,9 @@ builder.Services
         options.TokenValidationParameters = new TokenValidationParameters
         {
             ValidateIssuerSigningKey = true,
+            // Guaranteed non-empty and long enough by the checks above.
             IssuerSigningKey = new SymmetricSecurityKey(
-                Encoding.UTF8.GetBytes(jwtSettings.SecretKey ?? string.Empty)),
+                Encoding.UTF8.GetBytes(jwtSettings.SecretKey)),
 
             ValidateIssuer = true,
             ValidIssuer = jwtSettings.Issuer,

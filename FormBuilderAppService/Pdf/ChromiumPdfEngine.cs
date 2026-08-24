@@ -222,14 +222,17 @@ namespace FormBuilderAppService.Pdf
         private static readonly FileExtensionContentTypeProvider ContentTypes = new();
 
         private readonly PdfRendererSettings _settings;
+        private readonly ISafeExternalFetcher _ssrfFetcher;
         private readonly ILogger<PdfAssetProvider> _logger;
 
         public PdfAssetProvider(
             IOptions<PdfRendererSettings> settings,
             IHostEnvironment environment,
+            ISafeExternalFetcher ssrfFetcher,
             ILogger<PdfAssetProvider> logger)
         {
             _settings = settings.Value;
+            _ssrfFetcher = ssrfFetcher;
             _logger = logger;
 
             AssetsRoot = ResolveRoot(environment.ContentRootPath, _settings.AssetsPath);
@@ -268,17 +271,57 @@ namespace FormBuilderAppService.Pdf
 
                 if (!string.Equals(uri.Host, _settings.VirtualHost, StringComparison.OrdinalIgnoreCase))
                 {
-                    // Anything not served from disk, for example an image stored on a CDN.
-                    var isWeb = uri.Scheme is "http" or "https";
-                    if (_settings.AllowExternalResources && isWeb)
+                    // Anything not served from disk opens a real socket: an image on a CDN, an
+                    // iframe inside caller-supplied HTML, the next hop of a redirect chain, or
+                    // the navigation that started the render. Playwright routes all of them
+                    // through here, which is why this is the place the decision is made and
+                    // not the controller - the controller only ever sees the first URL.
+                    //
+                    // Two independent gates stand in front of the single fetch below, and both
+                    // have to pass before anything is fulfilled back into the page.
+
+                    // Gate 1 - policy. Does this deployment want remote fetching at all? It is
+                    // a plain bool, so in the default configuration every remote request is
+                    // refused here without paying for a DNS lookup.
+                    if (!_settings.AllowExternalResources)
                     {
-                        await route.ContinueAsync();
-                    }
-                    else
-                    {
-                        _logger.LogDebug("Blocked external resource {Url}", uri);
+                        _logger.LogDebug(
+                            "Blocked external resource {Url} (PdfRenderer:AllowExternalResources is false)",
+                            Describe(route.Request.Url));
                         await route.AbortAsync();
+                        return;
                     }
+
+                    // Gate 2 - security, and never skipped. AllowExternalResources decides
+                    // whether remote fetching is a feature; this decides whether the address
+                    // behind THIS request is one the renderer is allowed to reach. Keeping
+                    // them apart is the whole point: switching the feature on must not switch
+                    // the SSRF protection off.
+                    //
+                    // The fetcher does the fetch rather than ContinueAsync, and checks every
+                    // hop of a redirect chain. SafeExternalFetcher's class comment says why.
+                    var result = await _ssrfFetcher.FetchAsync(
+                        route.Request.Url,
+                        route.Request.Method,
+                        route.Request.Headers,
+                        route.Request.PostDataBuffer);
+
+                    if (!result.IsAllowed)
+                    {
+                        _logger.LogWarning(
+                            "Blocked PDF resource {Url} ({ResourceType}): {Reason}",
+                            Describe(route.Request.Url), route.Request.ResourceType, result.Reason);
+                        await route.AbortAsync();
+                        return;
+                    }
+
+                    await route.FulfillAsync(new RouteFulfillOptions
+                    {
+                        Status = result.Status,
+                        Headers = result.Headers,
+                        ContentType = result.ContentType,
+                        BodyBytes = result.Body
+                    });
 
                     return;
                 }
@@ -383,6 +426,13 @@ namespace FormBuilderAppService.Pdf
                 ? contentType
                 : "application/octet-stream";
 
+        /// <summary>
+        /// Trim a URL down to something safe to put in a log line. The blocked ones are
+        /// attacker-chosen and unbounded, and one render can produce many of them.
+        /// </summary>
+        private static string Describe(string url) =>
+            string.IsNullOrEmpty(url) || url.Length <= 200 ? url : url[..200] + "...";
+
         private static string ResolveRoot(string contentRoot, string configuredPath)
         {
             if (string.IsNullOrWhiteSpace(configuredPath))
@@ -438,46 +488,6 @@ namespace FormBuilderAppService.Pdf
     // =====================================================================================
     //  Content sources
     // =====================================================================================
-
-    /// <summary>
-    /// Renders a complete HTML document. Relative "/dist", "/app" and "/engine" URLs still
-    /// resolve, so callers can reuse the Form Builder styles.
-    /// </summary>
-    public sealed class HtmlContentSource : IPdfContentSource
-    {
-        private readonly string _html;
-
-        public HtmlContentSource(string html) => _html = html ?? throw new ArgumentNullException(nameof(html));
-
-        public string Description => "raw html";
-
-        public Task PrepareAsync(IPage page, CancellationToken cancellationToken) =>
-            page.SetContentAsync(_html, new PageSetContentOptions { WaitUntil = WaitUntilState.NetworkIdle });
-    }
-
-    /// <summary>Renders a page the browser can reach over http(s).</summary>
-    public sealed class UrlContentSource : IPdfContentSource
-    {
-        private readonly string _url;
-        private readonly int _timeoutMs;
-
-        public UrlContentSource(string url, int timeoutMs)
-        {
-            _url = url ?? throw new ArgumentNullException(nameof(url));
-            _timeoutMs = timeoutMs;
-        }
-
-        public string Description => _url;
-
-        public async Task PrepareAsync(IPage page, CancellationToken cancellationToken)
-        {
-            await page.GotoAsync(_url, new PageGotoOptions
-            {
-                WaitUntil = WaitUntilState.NetworkIdle,
-                Timeout = _timeoutMs
-            });
-        }
-    }
 
     /// <summary>
     /// Drives the Form.io render harness: navigates to render.html, hands it the form schemas
@@ -594,14 +604,6 @@ namespace FormBuilderAppService.Pdf
             _logger = logger;
             _concurrency = new SemaphoreSlim(Math.Max(1, _settings.MaxConcurrentRenders));
         }
-
-        public Task<PdfResult> RenderHtmlAsync(string html, PdfGenerationOptions options,
-            CancellationToken cancellationToken = default) =>
-            RenderAsync(new HtmlContentSource(html), options, cancellationToken);
-
-        public Task<PdfResult> RenderUrlAsync(string url, PdfGenerationOptions options,
-            CancellationToken cancellationToken = default) =>
-            RenderAsync(new UrlContentSource(url, _settings.NavigationTimeoutMs), options, cancellationToken);
 
         public async Task<PdfResult> RenderAsync(
             IPdfContentSource source,

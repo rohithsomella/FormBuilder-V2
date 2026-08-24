@@ -125,39 +125,6 @@ namespace FormBuilderAppService.Controllers
         }
 
         /// <summary>
-        /// Render arbitrary HTML (or a reachable URL) to PDF with the same engine.
-        /// Reusable for reports, invoices and EHR documents.
-        /// </summary>
-        [HttpPost("html")]
-        [ProducesResponseType(StatusCodes.Status200OK)]
-        [ProducesResponseType(StatusCodes.Status400BadRequest)]
-        [ProducesResponseType(StatusCodes.Status503ServiceUnavailable)]
-        public async Task<IActionResult> GenerateHtmlPdf(
-            [FromBody] HtmlPdfRequest request,
-            [FromQuery] bool download = false,
-            CancellationToken cancellationToken = default)
-        {
-            if (request == null || (string.IsNullOrWhiteSpace(request.Html) && string.IsNullOrWhiteSpace(request.Url)))
-            {
-                return BadRequest(new { message = "Either 'html' or 'url' must be supplied" });
-            }
-
-            var options = new PdfGenerationOptions
-            {
-                Page = request.Page ?? new PdfPageOptions(),
-                HeaderFooter = request.HeaderFooter ?? new PdfHeaderFooterOptions(),
-                Title = request.Title,
-                FileName = string.IsNullOrWhiteSpace(request.FileName) ? "document.pdf" : request.FileName!
-            };
-
-            return await GenerateAsync(
-                () => string.IsNullOrWhiteSpace(request.Url)
-                    ? _pdfEngine.RenderHtmlAsync(request.Html!, options, cancellationToken)
-                    : _pdfEngine.RenderUrlAsync(request.Url!, options, cancellationToken),
-                download);
-        }
-
-        /// <summary>
         /// Report whether Chromium and the rendering assets are ready. Useful as a
         /// deployment smoke test.
         ///

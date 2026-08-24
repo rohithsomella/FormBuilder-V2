@@ -62,6 +62,28 @@ namespace FormBuilderAppService.Services
                 return null;
             }
 
+            // Deliberately checked AFTER the password, not before.
+            //
+            // Identity's sign-in only verifies the hash and the lockout counter - it knows
+            // nothing about these two columns, so without this a suspended or soft-deleted
+            // account still receives a fully valid token and keeps working until it
+            // expires. The account also disappears from the admin User Details table
+            // (UserRepository.GetUsersAsync filters IsDeleted), so the screen would say
+            // access was revoked while it demonstrably was not.
+            //
+            // Running the hash comparison first costs one wasted verification on an
+            // account that is going to be refused anyway, and buys a uniform response
+            // time: rejecting before the hash check would make "this account is disabled"
+            // measurably faster than "wrong password", which is exactly the distinction
+            // the single InvalidCredentialsMessage in AuthController exists to prevent.
+            if (!IsUsable(user))
+            {
+                _logger.LogWarning(
+                    "Login refused for user {UserId}: IsActive={IsActive}, IsDeleted={IsDeleted}.",
+                    user.Id, user.IsActive, user.IsDeleted);
+                return null;
+            }
+
             return await BuildLoginResponseAsync(user);
         }
 
@@ -69,7 +91,15 @@ namespace FormBuilderAppService.Services
         {
             var user = await _userManager.FindByIdAsync(userId.ToString());
 
-            if (user is null)
+            // Same rule as login, applied to an already-issued token. Tokens are stateless
+            // and live for Jwt:ExpirationMinutes, so without this an account suspended a
+            // minute ago would keep answering /api/auth/me until its token expired.
+            //
+            // Returning null makes the endpoint answer 401, which the frontend already
+            // treats as "the session is over": auth.js clears local state and returns to
+            // the login page. Suspending an account therefore signs it out on the next
+            // page load rather than up to an hour later.
+            if (user is null || !IsUsable(user))
             {
                 return null;
             }
@@ -77,6 +107,16 @@ namespace FormBuilderAppService.Services
             var roles = await _userManager.GetRolesAsync(user);
             return ToDto(user, roles);
         }
+
+        /// <summary>
+        /// Whether an account may hold a session at all, independent of its password.
+        ///
+        /// IsActive is the reversible suspension and IsDeleted is the soft delete; the row
+        /// survives either way so submissions and audit trails still resolve to a real
+        /// account. Both are set on create (UserManagementService, IdentitySeeder) and
+        /// this is the single place the authentication path reads them.
+        /// </summary>
+        private static bool IsUsable(ApplicationUser user) => user.IsActive && !user.IsDeleted;
 
         /// <summary>
         /// Resolves one login box to one Identity user.

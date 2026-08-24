@@ -16,9 +16,16 @@ namespace FormBuilderAppService.Services
     /// </summary>
     public class JwtTokenService : IJwtTokenService
     {
-        // HMAC-SHA256 needs at least 256 bits of key material. Rejecting anything
-        // shorter at startup avoids issuing tokens that are cheap to forge.
-        private const int MinimumSecretKeyBytes = 32;
+        /// <summary>
+        /// HMAC-SHA256 needs at least 256 bits of key material. Rejecting anything shorter
+        /// avoids issuing tokens that are cheap to forge.
+        ///
+        /// Public because Program.cs enforces the same bound at startup, and the two must
+        /// not be allowed to drift. The checks in the constructor below are the backstop
+        /// for anything that resolves this service by another route - by the time they run
+        /// the process is already accepting requests, so they are not the primary gate.
+        /// </summary>
+        public const int MinimumSecretKeyBytes = 32;
 
         private readonly JwtSettings _settings;
 

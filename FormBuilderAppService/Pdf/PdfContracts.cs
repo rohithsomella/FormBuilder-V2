@@ -509,27 +509,6 @@ namespace FormBuilderAppService.Pdf
         public string? FileName { get; set; }
     }
 
-    /// <summary>
-    /// Generic request for the reusable engine: render arbitrary HTML (or a URL) to PDF.
-    /// Used by reports, invoices and any other consumer of the PDF service.
-    /// </summary>
-    public class HtmlPdfRequest
-    {
-        /// <summary>Raw HTML document. Ignored when <see cref="Url"/> is supplied.</summary>
-        public string? Html { get; set; }
-
-        /// <summary>Absolute http(s) URL to render.</summary>
-        public string? Url { get; set; }
-
-        public PdfPageOptions? Page { get; set; }
-
-        public PdfHeaderFooterOptions? HeaderFooter { get; set; }
-
-        public string? FileName { get; set; }
-
-        public string? Title { get; set; }
-    }
-
     // =====================================================================================
     //  Render harness payload (contract with wwwroot/pdf-engine/render.html)
     // =====================================================================================
@@ -639,14 +618,6 @@ namespace FormBuilderAppService.Pdf
         Task<PdfResult> RenderAsync(IPdfContentSource source, PdfGenerationOptions options,
             CancellationToken cancellationToken = default);
 
-        /// <summary>Render a complete HTML document.</summary>
-        Task<PdfResult> RenderHtmlAsync(string html, PdfGenerationOptions options,
-            CancellationToken cancellationToken = default);
-
-        /// <summary>Render a URL the browser can reach.</summary>
-        Task<PdfResult> RenderUrlAsync(string url, PdfGenerationOptions options,
-            CancellationToken cancellationToken = default);
-
         /// <summary>Verify Chromium and the rendering assets are usable.</summary>
         Task<PdfEngineHealth> CheckHealthAsync(CancellationToken cancellationToken = default);
     }
@@ -744,6 +715,11 @@ namespace FormBuilderAppService.Pdf
             // Chromium and the asset resolver are process wide - starting the browser once is
             // what keeps generation fast.
             services.AddSingleton<IPlaywrightBrowserProvider, PlaywrightBrowserProvider>();
+
+            // The SSRF boundary. The guard holds the rules; the fetcher is what the render
+            // route handler calls, and it applies the guard to every hop of every request.
+            services.AddSingleton<ISsrfGuard, SsrfGuard>();
+            services.AddSingleton<ISafeExternalFetcher, SafeExternalFetcher>();
             services.AddSingleton<IPdfAssetProvider, PdfAssetProvider>();
             services.AddSingleton<IPdfEngine, ChromiumPdfEngine>();
 
