@@ -133,3 +133,104 @@
 .password-reveal { display: flex; align-items: stretch; gap: 8px; }
 .password-reveal code { flex: 1; padding: 11px 12px; background: #f5f7fa; border: 1px dashed #b9b8f2; border-radius: 4px; font-size: 15px; font-family: Consolas, "Courier New", monospace; letter-spacing: 1px; color: #333; word-break: break-all; }
 .password-warning { display: flex; align-items: flex-start; gap: 6px; margin-top: 10px; font-size: 12px; color: #a4262c; }
+
+/* ---------------------------------------------------------------- Edit User Modal */
+
+/* Two columns of detail do not fit the 450px the other dialogs use. */
+.modal-content.edit-user-content { max-width: 720px; }
+
+.edit-user-grid { display: grid; grid-template-columns: 1fr 1fr; column-gap: 20px; row-gap: 18px; }
+
+/* Grid items default to min-width:auto, which lets a long value - an email-shaped
+   username, a list of five roles - push its column wider than the dialog. */
+.edit-field { min-width: 0; }
+.edit-field-label { display: block; font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.3px; color: #888; margin-bottom: 6px; }
+
+/* The control and the pencil that unlocks it share one line. */
+.edit-field-control { display: flex; align-items: center; gap: 8px; }
+.edit-field-control .modal-input,
+.edit-field-control .role-dropdown { flex: 1; min-width: 0; }
+
+/* A locked field should read as a printed value, not as an empty box waiting for input -
+   otherwise the dialog looks broken rather than deliberately read-only. */
+.edit-field.locked .modal-input,
+.edit-field.locked .role-dropdown-toggle { background: #f5f7fa; border-color: #e9e9e9; color: #555; cursor: default; }
+.edit-field.locked .role-dropdown-toggle .bi { opacity: 0.35; }
+
+/* The pencil. Fills in once its field is unlocked, so which cells are in play is
+   readable at a glance rather than only from the greying. */
+.btn-field-edit { flex: none; width: 34px; height: 38px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: 1px solid #ddd; border-radius: 4px; background: white; color: #5f5de8; font-size: 13px; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.btn-field-edit:hover { background: #f0f0fc; border-color: #5f5de8; }
+.edit-field:not(.locked) .btn-field-edit { background: #5f5de8; border-color: #5f5de8; color: white; }
+
+/* Verify, beside the username. Sized to the pencil rather than to its own padding so
+   the three controls on that row share one baseline, and fixed-width so the input keeps
+   the slack instead of the button growing. */
+#editModal .btn-verify { flex: none; height: 38px; padding: 0 14px; }
+#editModal .btn-verify:disabled { background: #c5c4f0; cursor: not-allowed; }
+
+/* Sits under the control row, in the same cell. The reserved min-height stops the grid
+   row from jumping the moment a verdict appears. */
+#editModal .username-feedback { margin-top: 6px; }
+
+/* Audit cells. No border box and no pencil: these are shown, never edited. The
+   min-height matches an input (10px padding + 1px border, twice, plus the line) so the
+   two columns stay on the same baseline whichever kind of cell is beside which. */
+.edit-field.readonly .edit-field-value { min-height: 38px; padding: 9px 0; box-sizing: border-box; border-bottom: 1px solid #eee; font-size: 14px; color: #333; word-break: break-word; }
+
+/* The Edit dialog's role menu floats over the rows below it. The Add dialog opens its
+   menu in the flow because the Save button sits directly underneath there; here the
+   field is in the middle of a grid, and growing the row would shunt the audit values
+   down the screen every time the dropdown was opened. */
+#editModal .role-dropdown-menu { position: absolute; top: calc(100% + 4px); left: 0; right: 0; z-index: 10; margin-top: 0; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12); }
+
+/* Change Password: collapsed until asked for, between the grid and the status row. */
+.edit-password-section { margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee; }
+
+.btn-change-password { display: inline-flex; align-items: center; gap: 7px; padding: 9px 16px; border: 1px solid #d5d4f7; border-radius: 4px; background: #f4f4fd; color: #5f5de8; font-size: 13px; font-weight: 600; cursor: pointer; transition: background 0.15s, border-color 0.15s; }
+.btn-change-password:hover { background: #ecebfb; border-color: #b9b8f2; }
+
+/* Open state reads as "this is armed", since the button now cancels rather than opens. */
+.btn-change-password.open { background: #fdecea; border-color: #f5c6cb; color: #a4262c; }
+
+/* Same two columns as the detail grid above, so the two boxes line up with the fields
+   they sit under rather than starting a new rhythm. The panel is shown and hidden by
+   setting display inline from script, which is why there is no display here to fight. */
+.password-fields { margin-top: 16px; grid-template-columns: 1fr 1fr; column-gap: 20px; row-gap: 14px; }
+
+/* The eye sits inside the box rather than beside it: these two rows already carry a
+   label and a rule line, and a third control on the row would crowd them. */
+.password-input-wrap { position: relative; }
+.password-input-wrap .modal-input { padding-right: 42px; }
+
+.btn-password-reveal { position: absolute; top: 50%; right: 4px; transform: translateY(-50%); width: 32px; height: 32px; display: inline-flex; align-items: center; justify-content: center; padding: 0; border: none; border-radius: 4px; background: transparent; color: #888; font-size: 15px; cursor: pointer; }
+.btn-password-reveal:hover { background: #f0f0fc; color: #5f5de8; }
+
+/* Both span the pair of columns - they describe the two boxes together, not either one. */
+.password-rules { grid-column: 1 / -1; font-size: 12px; color: #999; }
+.password-feedback { grid-column: 1 / -1; font-size: 12px; min-height: 16px; }
+.password-feedback.error { color: #c82333; }
+.password-feedback.ok { color: #218838; }
+
+/* Status row: full width under the grid, and the only control with no pencil. */
+.edit-status-row { display: flex; align-items: center; gap: 14px; margin-top: 24px; padding-top: 18px; border-top: 1px solid #eee; }
+.edit-status-row .edit-field-label { margin-bottom: 0; }
+
+.status-toggle { position: relative; display: inline-block; flex: none; width: 46px; height: 24px; margin: 0; }
+.status-toggle input { position: absolute; width: 0; height: 0; opacity: 0; }
+.status-slider { position: absolute; top: 0; right: 0; bottom: 0; left: 0; background: #dc3545; border-radius: 24px; cursor: pointer; transition: background 0.2s; }
+.status-slider::before { content: ''; position: absolute; top: 3px; left: 3px; width: 18px; height: 18px; background: white; border-radius: 50%; transition: transform 0.2s; }
+.status-toggle input:checked + .status-slider { background: #28a745; }
+.status-toggle input:checked + .status-slider::before { transform: translateX(22px); }
+.status-toggle input:focus-visible + .status-slider { box-shadow: 0 0 0 3px rgba(95, 93, 232, 0.25); }
+
+/* Colour is not the only signal - the word changes too - so this still reads for anyone
+   who cannot tell the two hues apart. */
+.status-text { font-size: 14px; font-weight: 700; }
+.status-text.active { color: #28a745; }
+.status-text.inactive { color: #dc3545; }
+
+/* Two half-width columns of timestamps are unreadable on a phone. */
+@media (max-width: 620px) {
+    .edit-user-grid { grid-template-columns: 1fr; }
+}

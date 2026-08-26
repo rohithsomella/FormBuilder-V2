@@ -29,13 +29,19 @@ namespace FormBuilderAppService.Repositories
             _dbContext = dbContext;
         }
 
-        public async Task<List<ApplicationUser>> GetUsersAsync()
+        public async Task<List<ApplicationUser>> GetUsersAsync(Guid currentUserId)
         {
             // Soft-deleted accounts keep their row so old references still resolve, but
             // they are not part of "the users" as far as the admin screen is concerned.
+            //
+            // The caller's own row is excluded in the same WHERE clause, so it is never
+            // fetched at all. Filtering it out after the query would still pull the row
+            // across the wire and leave it one careless mapping change away from being
+            // rendered - and would offer the admin Edit and Delete buttons aimed at
+            // themselves.
             return await _userManager.Users
                 .AsNoTracking()
-                .Where(u => !u.IsDeleted)
+                .Where(u => !u.IsDeleted && u.Id != currentUserId)
                 .OrderByDescending(u => u.Created)
                 .ToListAsync();
         }
@@ -73,11 +79,37 @@ namespace FormBuilderAppService.Repositories
         public Task<ApplicationUser?> FindByEmailAsync(string email) =>
             _userManager.FindByEmailAsync(email);
 
+        public Task<ApplicationUser?> FindByIdAsync(Guid userId) =>
+            _userManager.FindByIdAsync(userId.ToString());
+
         public Task<IdentityResult> CreateAsync(ApplicationUser user, string password) =>
             _userManager.CreateAsync(user, password);
 
+        // UpdateAsync, not _dbContext.SaveChanges: UserManager re-runs its validators and
+        // refreshes NormalizedUserName/NormalizedEmail before it saves.
+        public Task<IdentityResult> UpdateAsync(ApplicationUser user) =>
+            _userManager.UpdateAsync(user);
+
+        public Task<IList<string>> GetRolesForUserAsync(ApplicationUser user) =>
+            _userManager.GetRolesAsync(user);
+
         public Task<IdentityResult> AddToRolesAsync(ApplicationUser user, IEnumerable<string> roles) =>
             _userManager.AddToRolesAsync(user, roles);
+
+        public Task<IdentityResult> RemoveFromRolesAsync(ApplicationUser user, IEnumerable<string> roles) =>
+            _userManager.RemoveFromRolesAsync(user, roles);
+
+        public Task<IdentityResult> UpdateSecurityStampAsync(ApplicationUser user) =>
+            _userManager.UpdateSecurityStampAsync(user);
+
+        public Task<string> GeneratePasswordResetTokenAsync(ApplicationUser user) =>
+            _userManager.GeneratePasswordResetTokenAsync(user);
+
+        // ResetPasswordAsync, not a hand-assigned PasswordHash: this runs the password
+        // validators configured in Program.cs and rotates SecurityStamp.
+        public Task<IdentityResult> ResetPasswordAsync(
+            ApplicationUser user, string token, string newPassword) =>
+            _userManager.ResetPasswordAsync(user, token, newPassword);
 
         public Task<IdentityResult> DeleteAsync(ApplicationUser user) =>
             _userManager.DeleteAsync(user);

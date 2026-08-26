@@ -97,7 +97,7 @@
         // the click and send the user straight home instead of showing the menu.
         on('btnSignOut', confirmSignOut);
         on('btnEditProfile', function () { alert('Edit Profile is not available in this version.'); });
-        on('btnManageUsers', function () { window.location.href = 'userDetails.html'; });
+        on('btnAdminSettings', function () { window.location.href = 'userDetails.html'; });
     }
 
     function confirmSignOut() {

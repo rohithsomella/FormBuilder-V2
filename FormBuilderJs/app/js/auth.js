@@ -385,6 +385,47 @@ var Auth = (function () {
         }
     }
 
+    // ---------------------------------------------------------------- heartbeat
+
+    /**
+     * How often an open page checks that its session is still good.
+     *
+     * The API now refuses a token whose account has been deactivated, deleted, or had
+     * its password changed - but only when that token is actually presented. A page
+     * nobody is touching presents nothing, so without this a suspended user could sit on
+     * an open screen indefinitely and only discover it on their next click.
+     */
+    var HEARTBEAT_MS = 30000;
+
+    var heartbeatTimer = null;
+
+    /**
+     * One beat. GET /api/auth/me goes through the wrapped fetch, so a 401 is handled by
+     * handleUnauthorized on the way back - session cleared, redirected to login - and
+     * nothing here has to deal with the response at all.
+     */
+    function heartbeat() {
+        // A background tab has nobody looking at it, and waking every tab on a timer is
+        // how a quiet page turns into steady API traffic.
+        if (document.hidden) return;
+
+        if (isLoginPage() || !isAuthenticated()) return;
+
+        refreshCurrentUser();
+    }
+
+    function startHeartbeat() {
+        if (heartbeatTimer || isLoginPage()) return;
+
+        heartbeatTimer = setInterval(heartbeat, HEARTBEAT_MS);
+
+        // Returning to a tab is exactly when its session is most likely to be stale - a
+        // laptop that slept through the change would otherwise wait out the interval.
+        document.addEventListener('visibilitychange', function () {
+            if (!document.hidden) heartbeat();
+        });
+    }
+
     // ---------------------------------------------------------------- bootstrap
 
     installFetchHook();
@@ -416,6 +457,10 @@ var Auth = (function () {
         if (self && self.hasAttribute('data-no-guard')) return;
 
         requireAuth();
+
+        // Only a guarded page polls. A public one has no session to lose, and login.html
+        // is exempted inside startHeartbeat.
+        startHeartbeat();
     })();
 
     return {

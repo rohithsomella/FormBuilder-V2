@@ -82,35 +82,175 @@
     </div>
 </div>
 
-<!-- Edit User Modal -->
+<!--
+    Edit User Modal.
+
+    Two columns of detail about one account. The four editable fields start locked and
+    each carries a pencil that unlocks it, so an admin who opened the dialog to read the
+    audit trail cannot change a name by leaning on the keyboard.
+
+    Created/Updated are shown but never editable: they are the record of what happened,
+    and the API stamps Updated/UpdatedBy itself from the caller's token on every save.
+
+    All of its behaviour lives in js/userDetailsHandler.js.
+-->
 <div class="modal-overlay" id="editModal">
-    <div class="modal-content">
-        <div class="modal-header">Edit Row</div>
-        
-        <div class="modal-form-group">
-            <label class="modal-label">Username:</label>
-            <input type="text" class="modal-input" id="editUsername" placeholder="Enter username">
+    <div class="modal-content edit-user-content">
+
+        <!-- Filled with the user's full name when the dialog opens. -->
+        <div class="modal-header" id="editUserTitle">Edit User</div>
+
+        <div class="modal-error" id="editUserError" style="display: none;"></div>
+
+        <div class="edit-user-grid">
+
+            <div class="edit-field locked" id="editFieldFirstName">
+                <label class="edit-field-label" for="editFirstName">First Name</label>
+                <div class="edit-field-control">
+                    <input type="text" class="modal-input" id="editFirstName" autocomplete="off" disabled>
+                    <button type="button" class="btn-field-edit" data-unlock="editFieldFirstName"
+                            title="Edit first name" aria-label="Edit first name">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="edit-field locked" id="editFieldLastName">
+                <label class="edit-field-label" for="editLastName">Last Name</label>
+                <div class="edit-field-control">
+                    <input type="text" class="modal-input" id="editLastName" autocomplete="off" disabled>
+                    <button type="button" class="btn-field-edit" data-unlock="editFieldLastName"
+                            title="Edit last name" aria-label="Edit last name">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="edit-field locked" id="editFieldUserName">
+                <label class="edit-field-label" for="editUserName">Username</label>
+                <div class="edit-field-control">
+                    <input type="text" class="modal-input" id="editUserName" autocomplete="off" disabled>
+                    <!-- Same check as the Add dialog, but told which account is being
+                         edited - so leaving the name alone and pressing Verify does not
+                         report the user's own username back as taken. -->
+                    <button type="button" class="btn-verify" id="btnVerifyEditUserName" disabled>Verify</button>
+                    <button type="button" class="btn-field-edit" data-unlock="editFieldUserName"
+                            title="Edit username" aria-label="Edit username">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+                <div class="username-feedback" id="editUserNameFeedback"></div>
+            </div>
+
+            <div class="edit-field locked" id="editFieldRoles">
+                <label class="edit-field-label">Roles</label>
+                <div class="edit-field-control">
+                    <!-- Same multi-select as the Add dialog: an account can hold several
+                         roles, and the options come from GET /api/users/roles. -->
+                    <div class="role-dropdown" id="editRoleDropdown">
+                        <button type="button" class="role-dropdown-toggle" id="editRoleDropdownToggle" disabled>
+                            <span class="role-dropdown-label placeholder" id="editRoleDropdownLabel">Select role(s)</span>
+                            <i class="bi bi-chevron-down"></i>
+                        </button>
+                        <div class="role-dropdown-menu" id="editRoleDropdownMenu"></div>
+                    </div>
+                    <button type="button" class="btn-field-edit" data-unlock="editFieldRoles"
+                            title="Edit roles" aria-label="Edit roles">
+                        <i class="bi bi-pencil"></i>
+                    </button>
+                </div>
+            </div>
+
+            <!-- The audit trail. Read-only by design - see the comment above. -->
+            <div class="edit-field readonly">
+                <span class="edit-field-label">Created By</span>
+                <div class="edit-field-value" id="editCreatedBy">-</div>
+            </div>
+
+            <div class="edit-field readonly">
+                <span class="edit-field-label">Created Date</span>
+                <div class="edit-field-value" id="editCreated">-</div>
+            </div>
+
+            <div class="edit-field readonly">
+                <span class="edit-field-label">Updated By</span>
+                <div class="edit-field-value" id="editUpdatedBy">-</div>
+            </div>
+
+            <div class="edit-field readonly">
+                <span class="edit-field-label">Updated Date</span>
+                <div class="edit-field-value" id="editUpdated">-</div>
+            </div>
+
         </div>
 
-        <div class="modal-form-group">
-            <label class="modal-label">Full Name:</label>
-            <input type="text" class="modal-input" id="editFullName" placeholder="Enter full name">
+        <!--
+            Change Password. Collapsed until asked for, because most edits are not
+            password resets and two empty password boxes on every open invite one.
+
+            Both boxes are type="password" - masked by default - with an eye button that
+            reveals them, so an admin can check what they typed before handing it over.
+            The value is sent to its own endpoint, hashed by Identity, and never stored
+            or returned in plain form.
+        -->
+        <div class="edit-password-section">
+            <button type="button" class="btn-change-password" id="btnToggleChangePassword">
+                <i class="bi bi-key"></i> <span id="btnToggleChangePasswordLabel">Change Password</span>
+            </button>
+
+            <div class="password-fields" id="editPasswordFields" style="display: none;">
+                <div class="edit-field">
+                    <label class="edit-field-label" for="editNewPassword">New Password</label>
+                    <div class="password-input-wrap">
+                        <input type="password" class="modal-input" id="editNewPassword"
+                               autocomplete="new-password" spellcheck="false">
+                        <button type="button" class="btn-password-reveal" data-reveals="editNewPassword"
+                                title="Show password" aria-label="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="edit-field">
+                    <label class="edit-field-label" for="editConfirmPassword">Re-enter New Password</label>
+                    <div class="password-input-wrap">
+                        <input type="password" class="modal-input" id="editConfirmPassword"
+                               autocomplete="new-password" spellcheck="false">
+                        <button type="button" class="btn-password-reveal" data-reveals="editConfirmPassword"
+                                title="Show password" aria-label="Show password">
+                            <i class="bi bi-eye"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Identity's default policy, as configured in Program.cs. Stated up
+                     front so the rules are not discovered one rejection at a time. -->
+                <div class="password-rules">
+                    At least 6 characters, including an uppercase letter, a lowercase
+                    letter, a digit and a symbol.
+                </div>
+
+                <div class="password-feedback" id="editPasswordFeedback"></div>
+            </div>
         </div>
 
-        <div class="modal-form-group">
-            <label class="modal-label">Role:</label>
-            <select class="modal-select" id="editRole">
-                <option value="Developer">Developer</option>
-                <option value="Manager">Manager</option>
-                <option value="Analyst">Analyst</option>
-                <option value="Designer">Designer</option>
-                <option value="Admin">Admin</option>
-            </select>
+        <!--
+            Status. No pencil on this one - the toggle is live as soon as the dialog
+            opens, and like every other field the change only reaches the database when
+            Save is pressed. Inactive is a real suspension: the API refuses the login.
+        -->
+        <div class="edit-status-row">
+            <span class="edit-field-label">Status</span>
+            <label class="status-toggle">
+                <input type="checkbox" id="editIsActive">
+                <span class="status-slider"></span>
+            </label>
+            <span class="status-text active" id="editIsActiveText">Active</span>
         </div>
 
         <div class="modal-buttons">
-            <button class="modal-btn-cancel" onclick="cancelEdit()">Cancel</button>
-            <button class="modal-btn-save" onclick="saveEdit()">Save</button>
+            <button class="modal-btn-cancel" id="btnCancelEditUser">Cancel</button>
+            <button class="modal-btn-save" id="btnSaveEditUser">Save</button>
         </div>
     </div>
 </div>
@@ -216,7 +356,6 @@
     const ITEMS_PER_PAGE = 5;
     let currentPage = 1;
     let filteredUsers = [];
-    let editingUserId = null;
 
     // Rows come from GET /api/users (AspNetUsers). This is the loaded copy the table
     // renders, searches and sorts against, and it is replaced wholesale on every reload.
@@ -249,6 +388,10 @@
     /**
      * The API's user shape mapped onto what this table already renders. `role` is a
      * joined list because an account can now hold more than one.
+     *
+     * `roles` keeps the original array alongside it: the table wants one string, the
+     * Edit dialog's multi-select wants the list. The audit fields and isActive are
+     * carried through untouched for the same dialog.
      */
     function toTableRow(user) {
         return {
@@ -256,9 +399,15 @@
             username: user.userName,
             firstName: user.firstName || '',
             lastName: user.lastName || '',
+            fullName: user.fullName || '',
             email: user.email || '',
+            roles: user.roles || [],
             role: (user.roles || []).join(', '),
-            created: user.created
+            isActive: user.isActive !== false,
+            created: user.created,
+            createdBy: user.createdBy || '',
+            updated: user.updated,
+            updatedBy: user.updatedBy || ''
         };
     }
 
@@ -362,45 +511,37 @@
     function editUser(userId) {
         const user = allUsers.find(u => u.id === userId);
         if (user) {
-            editingUserId = userId;
-            document.getElementById('editUsername').value = user.username;
-            document.getElementById('editFullName').value = user.firstName + ' ' + user.lastName;
-            document.getElementById('editRole').value = user.role;
-            document.getElementById('editModal').classList.add('active');
+            UserDetailsHandler.openEditUserDialog(user);
         }
     }
 
-    function cancelEdit() {
-        document.getElementById('editModal').classList.remove('active');
-        editingUserId = null;
-    }
-
-    function saveEdit() {
-        if (!editingUserId) return;
-
-        const user = allUsers.find(u => u.id === editingUserId);
-        if (user) {
-            const fullName = document.getElementById('editFullName').value.trim().split(' ');
-            user.username = document.getElementById('editUsername').value.trim();
-            user.firstName = fullName[0] || '';
-            user.lastName = fullName.slice(1).join(' ') || '';
-            user.role = document.getElementById('editRole').value;
-
-            cancelEdit();
-            renderTable();
-        }
-    }
-
+    /**
+     * Soft-delete, not a removal: the API updates the AspNetUsers row with IsDeleted = 1
+     * and the account stops being listed. The table is reloaded from the API afterwards
+     * rather than having the row spliced out locally, so what is on screen is what the
+     * server actually did - a delete that failed leaves the row where it was.
+     */
     function deleteUser(userId) {
-        if (confirm('Are you sure you want to delete this user?')) {
-            const index = allUsers.findIndex(u => u.id === userId);
-            if (index > -1) {
-                allUsers.splice(index, 1);
-                filteredUsers = filteredUsers.filter(u => u.id !== userId);
-                currentPage = 1;
-                renderTable();
-            }
+        const user = allUsers.find(u => u.id === userId);
+        if (!user) return;
+
+        const name = (user.fullName || user.username || 'this user').trim();
+
+        if (!confirm(`Delete ${name}?\n\nThe account will stop being listed and will no longer be able to sign in. Its record is kept, so anything referring to it still resolves.`)) {
+            return;
         }
+
+        FormBuilderApi.deleteUser(
+            userId,
+            function () {
+                // Reloading also resets to page 1, which matters here: the page being
+                // viewed may not exist once the list is a row shorter.
+                loadUsersTable();
+            },
+            function (error) {
+                alert(error);
+            }
+        );
     }
 
     function addNewUser() {
@@ -409,18 +550,16 @@
 
     // Load table on page load
     document.addEventListener('DOMContentLoaded', function () {
-        // The dialog reloads the table itself once an account has been created, so a
-        // new user appears without the admin having to refresh.
-        UserDetailsHandler.init({ onUserCreated: loadUsersTable });
+        // Both dialogs reload the table themselves once they have written to the API, so
+        // a new or edited account shows up without the admin having to refresh. Reloading
+        // rather than patching the local array also means the row shows what the server
+        // actually stored - including the Updated stamp it wrote on the way through.
+        UserDetailsHandler.init({
+            onUserCreated: loadUsersTable,
+            onUserUpdated: loadUsersTable
+        });
 
         loadUsersTable();
-    });
-
-    // Close modal when clicking outside
-    document.getElementById('editModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            cancelEdit();
-        }
     });
 </script>
 
