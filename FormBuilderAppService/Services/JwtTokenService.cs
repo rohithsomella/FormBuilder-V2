@@ -27,6 +27,20 @@ namespace FormBuilderAppService.Services
         /// </summary>
         public const int MinimumSecretKeyBytes = 32;
 
+        /// <summary>
+        /// Carries the account's SecurityStamp into the token.
+        ///
+        /// This is what makes a token revocable. Identity rotates SecurityStamp whenever
+        /// the credentials change - a password reset does it automatically - so a token
+        /// minted before the change no longer matches the row and can be refused. Without
+        /// it a JWT is valid until it expires, no matter what an admin does to the
+        /// account in the meantime.
+        ///
+        /// Public because Program.cs reads the same claim back on every request; the two
+        /// must not drift.
+        /// </summary>
+        public const string SecurityStampClaimType = "fb:security_stamp";
+
         private readonly JwtSettings _settings;
 
         public JwtTokenService(IOptions<JwtSettings> settings)
@@ -60,6 +74,11 @@ namespace FormBuilderAppService.Services
                 new(ClaimTypes.NameIdentifier, user.Id.ToString()),
                 new(ClaimTypes.Name, user.UserName ?? string.Empty),
                 new(ClaimTypes.Email, user.Email ?? string.Empty),
+
+                // Snapshot of the account's credentials at the moment this token was
+                // issued. Program.cs compares it against the stored value on every
+                // request, so changing the password invalidates tokens already handed out.
+                new(SecurityStampClaimType, user.SecurityStamp ?? string.Empty),
 
                 // Unique token id - the handle a V2 revocation/refresh story would use.
                 new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),

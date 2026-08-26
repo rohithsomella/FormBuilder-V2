@@ -1,3 +1,4 @@
+using System.Security.Claims;
 using System.Text;
 using FormBuilderAppService.Data;
 using FormBuilderAppService.Models.Identity;
@@ -156,6 +157,69 @@ builder.Services
 
             // Default is 5 minutes of leeway, which lets an "expired" token keep working.
             ClockSkew = TimeSpan.Zero
+        };
+
+        //
+        // Everything above validates the token as a document: correctly signed, right
+        // issuer and audience, not expired. None of it asks whether the account behind
+        // it is still one we want to serve - a JWT carries no such link, which is why a
+        // password change, a deactivation or a delete would otherwise have no effect
+        // until the token expired on its own.
+        //
+        // This hook adds that link. It costs one primary-key lookup per authenticated
+        // request, which is the price of being able to end a session on demand.
+        //
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userManager = context.HttpContext.RequestServices
+                    .GetRequiredService<UserManager<ApplicationUser>>();
+
+                var userId = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+
+                if (!Guid.TryParse(userId, out var id))
+                {
+                    context.Fail("Token carries no usable user id.");
+                    return;
+                }
+
+                var user = await userManager.FindByIdAsync(id.ToString());
+
+                // Covers both "deactivated" and "deleted" in one comparison - the same
+                // IsUsable rule AuthService applies at login, now applied on every
+                // request. An admin flipping either flag ends the session immediately;
+                // no security stamp rotation is needed for those two because this check
+                // already refuses the token outright.
+                if (user is null || user.IsDeleted || !user.IsActive)
+                {
+                    context.Fail("This account is no longer active.");
+                    return;
+                }
+
+                // Covers "the password was changed". Identity rotates SecurityStamp
+                // inside ResetPasswordAsync, so a token minted beforehand carries the
+                // old value and stops matching here.
+                var tokenStamp = context.Principal?.FindFirstValue(
+                    JwtTokenService.SecurityStampClaimType);
+
+                // Either side missing means this token cannot be checked against
+                // anything - a token issued before this claim existed, or a row created
+                // outside Identity, which always writes a stamp. Refused deliberately
+                // and with its own reason, rather than falling through to the comparison
+                // below and being reported as a password change that never happened.
+                if (string.IsNullOrEmpty(tokenStamp) || string.IsNullOrEmpty(user.SecurityStamp))
+                {
+                    context.Fail("This session cannot be verified. Sign in again.");
+                    return;
+                }
+
+                if (!string.Equals(tokenStamp, user.SecurityStamp, StringComparison.Ordinal))
+                {
+                    context.Fail("The credentials for this account have changed.");
+                    return;
+                }
+            }
         };
     });
 

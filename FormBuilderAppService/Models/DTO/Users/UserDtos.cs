@@ -24,8 +24,33 @@ namespace FormBuilderAppService.Models.DTOs.Users
     }
 
     /// <summary>
-    /// One row of the User Details table. Deliberately mirrors what the table renders -
-    /// nothing sensitive (no password hash, no security stamp) is exposed here.
+    /// What the Edit User dialog sends back. Only the four fields the dialog can unlock,
+    /// plus the active flag behind its toggle.
+    ///
+    /// No audit fields. Updated and UpdatedBy are written by the service from the caller's
+    /// token - accepting them here would let the request claim somebody else made the
+    /// change, and Created/CreatedBy are history that an edit has no business rewriting.
+    ///
+    /// No email either: the dialog does not show it, so a request that omitted it would
+    /// otherwise read as "clear this user's email".
+    /// </summary>
+    public class UpdateUserRequest
+    {
+        public string FirstName { get; set; } = string.Empty;
+
+        public string LastName { get; set; } = string.Empty;
+
+        public string UserName { get; set; } = string.Empty;
+
+        public List<string> Roles { get; set; } = new();
+
+        public bool IsActive { get; set; }
+    }
+
+    /// <summary>
+    /// One row of the User Details table, and everything the Edit User dialog shows.
+    /// Deliberately mirrors what those two render - nothing sensitive (no password hash,
+    /// no security stamp) is exposed here.
     /// </summary>
     public class UserListItemDto
     {
@@ -43,7 +68,19 @@ namespace FormBuilderAppService.Models.DTOs.Users
 
         public List<string> Roles { get; set; } = new();
 
+        /// <summary>
+        /// The reversible suspension, not the soft delete. AuthService refuses to sign in
+        /// an account with this false, so the dialog's toggle really does disable someone.
+        /// </summary>
+        public bool IsActive { get; set; }
+
         public DateTime Created { get; set; }
+
+        public string CreatedBy { get; set; } = string.Empty;
+
+        public DateTime Updated { get; set; }
+
+        public string UpdatedBy { get; set; } = string.Empty;
     }
 
     /// <summary>
@@ -111,6 +148,148 @@ namespace FormBuilderAppService.Models.DTOs.Users
         };
 
         public static CreateUserResult Failure(IEnumerable<string> errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+    }
+
+    /// <summary>
+    /// Service-layer outcome of an edit. Same shape as <see cref="CreateUserResult"/>,
+    /// with one extra state: an id that matches nobody is a 404 rather than a 400, so
+    /// "you asked for a user that is not there" does not read as "your data was wrong".
+    /// </summary>
+    public class UpdateUserResult
+    {
+        public bool Succeeded { get; private init; }
+
+        public bool NotFound { get; private init; }
+
+        public UserListItemDto? Updated { get; private init; }
+
+        public List<string> Errors { get; private init; } = new();
+
+        public static UpdateUserResult Success(UserListItemDto updated) => new()
+        {
+            Succeeded = true,
+            Updated = updated
+        };
+
+        public static UpdateUserResult Missing() => new()
+        {
+            Succeeded = false,
+            NotFound = true,
+            Errors = { "That user no longer exists." }
+        };
+
+        public static UpdateUserResult Failure(params string[] errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+
+        public static UpdateUserResult Failure(IEnumerable<string> errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+    }
+
+    /// <summary>
+    /// What the Edit dialog's "Change Password" panel sends.
+    ///
+    /// Deliberately its own request rather than a field on <see cref="UpdateUserRequest"/>.
+    /// A password does not belong on the general-purpose update DTO: that one is bound on
+    /// every save, appears in the generated API description, and would carry a plaintext
+    /// secret through model binding on requests that never intended to set one.
+    ///
+    /// No current-password field. This is an admin resetting somebody else's account, not
+    /// a user changing their own - the authority is the caller's Admin role, which the
+    /// controller has already established from the token.
+    /// </summary>
+    public class SetUserPasswordRequest
+    {
+        public string NewPassword { get; set; } = string.Empty;
+
+        /// <summary>
+        /// Re-checked here even though the dialog compares them first. A typo protected
+        /// only by client-side script is not protected at all, and the cost of getting
+        /// this wrong is an account whose password nobody knows.
+        /// </summary>
+        public string ConfirmPassword { get; set; } = string.Empty;
+    }
+
+    /// <summary>
+    /// Service-layer outcome of a password reset. Carries nothing back but the verdict -
+    /// there is no state here worth returning, and certainly not the password.
+    /// </summary>
+    public class SetPasswordResult
+    {
+        public bool Succeeded { get; private init; }
+
+        public bool NotFound { get; private init; }
+
+        public List<string> Errors { get; private init; } = new();
+
+        public static SetPasswordResult Success() => new()
+        {
+            Succeeded = true
+        };
+
+        public static SetPasswordResult Missing() => new()
+        {
+            Succeeded = false,
+            NotFound = true,
+            Errors = { "That user no longer exists." }
+        };
+
+        public static SetPasswordResult Failure(params string[] errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+
+        public static SetPasswordResult Failure(IEnumerable<string> errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+    }
+
+    /// <summary>
+    /// Service-layer outcome of a delete.
+    ///
+    /// Carries no user back. The row still exists - this is a soft delete - but it is no
+    /// longer part of "the users" as far as the caller is concerned, so handing back a
+    /// record of it would invite somebody to render a deleted account.
+    /// </summary>
+    public class DeleteUserResult
+    {
+        public bool Succeeded { get; private init; }
+
+        public bool NotFound { get; private init; }
+
+        public List<string> Errors { get; private init; } = new();
+
+        public static DeleteUserResult Success() => new()
+        {
+            Succeeded = true
+        };
+
+        public static DeleteUserResult Missing() => new()
+        {
+            Succeeded = false,
+            NotFound = true,
+            Errors = { "That user no longer exists." }
+        };
+
+        public static DeleteUserResult Failure(params string[] errors) => new()
+        {
+            Succeeded = false,
+            Errors = errors.ToList()
+        };
+
+        public static DeleteUserResult Failure(IEnumerable<string> errors) => new()
         {
             Succeeded = false,
             Errors = errors.ToList()

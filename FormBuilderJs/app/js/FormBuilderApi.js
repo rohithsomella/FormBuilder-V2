@@ -302,8 +302,11 @@ var FormBuilderApi = (function() {
      * @param {string} userName - The username to check
      * @param {Function} onSuccess - Callback receiving { userName, isAvailable, message }
      * @param {Function} onError - Callback function on error
+     * @param {string} [excludeUserId] - Account to ignore when looking for a clash. The
+     *        Edit dialog passes the user being edited, so leaving their username alone
+     *        and pressing Verify does not report their own name back as taken.
      */
-    function checkUserName(userName, onSuccess, onError) {
+    function checkUserName(userName, onSuccess, onError, excludeUserId) {
         if (!userName) {
             console.error('Username is required for verification');
             if (onError) {
@@ -312,8 +315,14 @@ var FormBuilderApi = (function() {
             return;
         }
 
+        var url = config.userBaseUrl + '/username-availability?userName=' + encodeURIComponent(userName);
+
+        if (excludeUserId) {
+            url += '&excludeUserId=' + encodeURIComponent(excludeUserId);
+        }
+
         $.ajax({
-            url: config.userBaseUrl + '/username-availability?userName=' + encodeURIComponent(userName),
+            url: url,
             type: 'GET',
             contentType: config.contentType,
             dataType: 'json',
@@ -388,6 +397,198 @@ var FormBuilderApi = (function() {
                     errorMessage = xhr.responseJSON.message;
                 } else if (xhr.status === 403) {
                     errorMessage = 'You do not have permission to create users.';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Save the Edit User dialog back to an existing account.
+     *
+     * Only the fields that dialog can change are sent. The audit columns are not among
+     * them - Updated and UpdatedBy are stamped by the API from the caller's token, and
+     * Created/CreatedBy are history it will not let anybody rewrite.
+     *
+     * @param {string} userId - The account's id (AspNetUsers.Id)
+     * @param {Object} userData - { firstName, lastName, userName, roles: [], isActive }
+     * @param {Function} onSuccess - Callback receiving the updated user
+     * @param {Function} onError - Callback function on error
+     */
+    function updateUser(userId, userData, onSuccess, onError) {
+        if (!userId || !userData) {
+            console.error('User id and data are required');
+            if (onError) {
+                onError('User id and data are required', 400);
+            }
+            return;
+        }
+
+        var payload = {
+            firstName: userData.firstName || '',
+            lastName: userData.lastName || '',
+            userName: userData.userName || '',
+            roles: userData.roles || [],
+            isActive: !!userData.isActive
+        };
+
+        $.ajax({
+            url: config.userBaseUrl + '/' + encodeURIComponent(userId),
+            type: 'PUT',
+            contentType: config.contentType,
+            dataType: 'json',
+            data: JSON.stringify(payload),
+            success: function (response) {
+                console.log('User updated successfully:', response);
+                if (onSuccess) {
+                    onSuccess(response);
+                }
+            },
+            error: function (xhr) {
+                console.error('Error updating user');
+
+                var errorMessage = 'Error updating user';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 404) {
+                    // See the note in setUserPassword: the API's own "no such user" 404
+                    // carries a message, so a bodyless one is a missing route.
+                    errorMessage = 'The update endpoint was not found (404). If the API was updated recently, restart it.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'You do not have permission to edit users.';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Set a new password on an account, from the Edit dialog's Change Password panel.
+     *
+     * The API hashes it and answers 204 with no body - the password is never stored in
+     * plain form and never echoed back. Nothing here logs the value, and it must not be
+     * added to any console call: this is the one payload on this page that would be a
+     * real credential sitting in a browser console.
+     *
+     * @param {string} userId - The account's id (AspNetUsers.Id)
+     * @param {Object} passwords - { newPassword, confirmPassword }
+     * @param {Function} onSuccess - Callback function on success (no body is returned)
+     * @param {Function} onError - Callback function on error
+     */
+    function setUserPassword(userId, passwords, onSuccess, onError) {
+        if (!userId || !passwords) {
+            console.error('User id and password are required');
+            if (onError) {
+                onError('User id and password are required', 400);
+            }
+            return;
+        }
+
+        var payload = {
+            newPassword: passwords.newPassword || '',
+            confirmPassword: passwords.confirmPassword || ''
+        };
+
+        $.ajax({
+            url: config.userBaseUrl + '/' + encodeURIComponent(userId) + '/password',
+            type: 'PUT',
+            contentType: config.contentType,
+            data: JSON.stringify(payload),
+
+            // No dataType, for the same reason as deleteUser: 204 has an empty body and
+            // asking jQuery to parse it as JSON turns success into a parsererror.
+            success: function () {
+                console.log('Password updated for user:', userId);
+                if (onSuccess) {
+                    onSuccess();
+                }
+            },
+            error: function (xhr) {
+                console.error('Error setting password');
+
+                var errorMessage = 'Error setting password';
+
+                // errors carries every policy rule the password missed. Joined so the
+                // admin fixes all of them at once instead of one attempt at a time.
+                if (xhr.responseJSON && xhr.responseJSON.errors && xhr.responseJSON.errors.length) {
+                    errorMessage = xhr.responseJSON.errors.join(' ');
+                } else if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 404) {
+                    // A 404 here means one of two very different things, and the body is
+                    // what separates them. "No such user" comes back with a message and
+                    // was handled above; a 404 with no body at all is an unmatched route,
+                    // which is what an API still running an older build looks like.
+                    errorMessage = 'The password endpoint was not found (404). If the API was updated recently, restart it.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'You do not have permission to change passwords.';
+                } else if (xhr.status === 0) {
+                    errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
+                }
+
+                if (onError) {
+                    onError(errorMessage, xhr.status);
+                }
+            }
+        });
+    }
+
+    /**
+     * Soft-delete a user account.
+     *
+     * The API updates the row with IsDeleted = 1 rather than removing it, so anything
+     * that already points at this user keeps resolving. The account simply stops being
+     * listed - so the caller should reload the table rather than patch it locally.
+     *
+     * @param {string} userId - The account's id (AspNetUsers.Id)
+     * @param {Function} onSuccess - Callback function on success (no body is returned)
+     * @param {Function} onError - Callback function on error
+     */
+    function deleteUser(userId, onSuccess, onError) {
+        if (!userId) {
+            console.error('User id is required');
+            if (onError) {
+                onError('User id is required', 400);
+            }
+            return;
+        }
+
+        $.ajax({
+            url: config.userBaseUrl + '/' + encodeURIComponent(userId),
+            type: 'DELETE',
+
+            // No dataType: the API answers 204 with an empty body, and asking jQuery to
+            // parse that as JSON turns a successful delete into a parsererror.
+            success: function () {
+                console.log('User deleted successfully:', userId);
+                if (onSuccess) {
+                    onSuccess();
+                }
+            },
+            error: function (xhr) {
+                console.error('Error deleting user');
+
+                var errorMessage = 'Error deleting user';
+
+                if (xhr.responseJSON && xhr.responseJSON.message) {
+                    errorMessage = xhr.responseJSON.message;
+                } else if (xhr.status === 404) {
+                    // See the note in setUserPassword: the API's own "no such user" 404
+                    // carries a message, so a bodyless one is a missing route.
+                    errorMessage = 'The delete endpoint was not found (404). If the API was updated recently, restart it.';
+                } else if (xhr.status === 403) {
+                    errorMessage = 'You do not have permission to delete users.';
                 } else if (xhr.status === 0) {
                     errorMessage = 'Network error: Cannot reach the API server. Make sure the backend is running.';
                 }
@@ -1848,6 +2049,9 @@ function displayPaginatedForms() {
         getAssignableRoles: getAssignableRoles,
         checkUserName: checkUserName,
         createUser: createUser,
+        updateUser: updateUser,
+        setUserPassword: setUserPassword,
+        deleteUser: deleteUser,
         getFormById: getFormById,
         saveForm: saveForm,
         updateForm: updateForm,
