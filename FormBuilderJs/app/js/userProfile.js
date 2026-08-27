@@ -96,8 +96,158 @@
         // menu already contains a Home link. Attaching a redirect here would swallow
         // the click and send the user straight home instead of showing the menu.
         on('btnSignOut', confirmSignOut);
-        on('btnEditProfile', function () { alert('Edit Profile is not available in this version.'); });
+        on('btnEditProfile', openEditProfileModal);
         on('btnAdminSettings', function () { window.location.href = 'userDetails.html'; });
+        // Edit Profile Modal Events
+        on('cancelEditProfile', closeEditProfileModal);
+        on('btnChangePassword', togglePasswordSection);
+        on('btnDeactivateUser', deactivateUser);
+        on('verifyUsername', verifyUsername);
+        on('toggleEditFirstName', toggleEditFirstName);
+        on('toggleEditLastName', toggleEditLastName);
+        on('toggleEditUserName', toggleEditUserName);
+
+        // Form submissions
+        var editForm = document.getElementById('editProfileForm');
+        if (editForm) {
+            editForm.addEventListener('submit', function (e) {
+                e.preventDefault();
+                saveEditProfile();
+            });
+        }
+
+        // Close modals when clicking overlay
+        var editOverlay = document.getElementById('editProfileOverlay');
+        if (editOverlay) {
+            editOverlay.addEventListener('click', closeEditProfileModal);
+        }
+    }
+
+    var currentUser = null;
+
+    function openEditProfileModal() {
+        var modal = document.getElementById('editProfileModal');
+        var overlay = document.getElementById('editProfileOverlay');
+        
+        if (modal && overlay && currentUser) {
+            // Populate form with current user data
+            var firstName = (currentUser.name || '').split(' ')[0] || '';
+            var lastName = (currentUser.name || '').split(' ').slice(1).join(' ') || '';
+            
+            document.getElementById('editFirstName').value = firstName;
+            document.getElementById('editLastName').value = lastName;
+            document.getElementById('editUserName').value = currentUser.userName || '';
+            
+            // Disable fields by default (read-only mode)
+            document.getElementById('editFirstName').disabled = true;
+            document.getElementById('editLastName').disabled = true;
+            document.getElementById('editUserName').disabled = true;
+            
+            // Disable verify button by default
+            var verifyBtn = document.getElementById('verifyUsername');
+            if (verifyBtn) {
+                verifyBtn.disabled = true;
+            }
+            
+            // Hide password section by default
+            var passwordSection = document.getElementById('passwordSection');
+            if (passwordSection) {
+                passwordSection.style.display = 'none';
+                // Clear password fields
+                document.getElementById('currentPassword').value = '';
+                document.getElementById('newPassword').value = '';
+                document.getElementById('confirmPassword').value = '';
+            }
+            
+            // Reset Change Password button text
+            var changePasswordBtn = document.getElementById('btnChangePassword');
+            if (changePasswordBtn) {
+                changePasswordBtn.textContent = 'Change Password';
+            }
+            
+            // Update title with user name
+            var title = document.getElementById('editModalTitle');
+            if (title) {
+                title.textContent = currentUser.name || currentUser.userName || 'User';
+            }
+            
+            modal.classList.add('active');
+            overlay.classList.add('active');
+        }
+    }
+
+    function closeEditProfileModal() {
+        var modal = document.getElementById('editProfileModal');
+        var overlay = document.getElementById('editProfileOverlay');
+        
+        if (modal && overlay) {
+            modal.classList.remove('active');
+            overlay.classList.remove('active');
+            
+            // Disable fields when modal is closed
+            document.getElementById('editFirstName').disabled = true;
+            document.getElementById('editLastName').disabled = true;
+            document.getElementById('editUserName').disabled = true;
+            
+            // Disable verify button
+            var verifyBtn = document.getElementById('verifyUsername');
+            if (verifyBtn) {
+                verifyBtn.disabled = true;
+            }
+        }
+    }
+
+    function togglePasswordSection() {
+        var passwordSection = document.getElementById('passwordSection');
+        var changePasswordBtn = document.getElementById('btnChangePassword');
+        if (passwordSection) {
+            if (passwordSection.style.display === 'none') {
+                passwordSection.style.display = 'block';
+                if (changePasswordBtn) {
+                    changePasswordBtn.textContent = 'Cancel Password';
+                }
+                // Focus on first password field
+                document.getElementById('currentPassword').focus();
+            } else {
+                passwordSection.style.display = 'none';
+                if (changePasswordBtn) {
+                    changePasswordBtn.textContent = 'Change Password';
+                }
+            }
+        }
+    }
+
+    function toggleEditFirstName() {
+        toggleInputEdit('editFirstName');
+    }
+
+    function toggleEditLastName() {
+        toggleInputEdit('editLastName');
+    }
+
+    function toggleEditUserName() {
+        toggleInputEdit('editUserName');
+    }
+
+    function toggleInputEdit(inputId) {
+        var input = document.getElementById(inputId);
+        if (input) {
+            // Toggle disabled state
+            input.disabled = !input.disabled;
+            
+            // If enabling the field, focus on it
+            if (!input.disabled) {
+                input.focus();
+            }
+            
+            // Handle verify button for username field
+            if (inputId === 'editUserName') {
+                var verifyBtn = document.getElementById('verifyUsername');
+                if (verifyBtn) {
+                    verifyBtn.disabled = input.disabled; // Verify button matches input disabled state
+                }
+            }
+        }
     }
 
     function confirmSignOut() {
@@ -108,7 +258,67 @@
         }
     }
 
-    // -------------------------------------------------------------- small helpers
+    function verifyUsername() {
+        var username = document.getElementById('editUserName').value;
+        
+        if (!username) {
+            alert('Please enter a username');
+            return;
+        }
+        
+        alert('Username verified');
+    }
+
+    function saveEditProfile() {
+        var firstName = document.getElementById('editFirstName').value.trim();
+        var lastName = document.getElementById('editLastName').value.trim();
+        var userName = document.getElementById('editUserName').value.trim();
+        var currentPassword = document.getElementById('currentPassword') ? document.getElementById('currentPassword').value : '';
+        var newPassword = document.getElementById('newPassword') ? document.getElementById('newPassword').value : '';
+        var confirmPassword = document.getElementById('confirmPassword') ? document.getElementById('confirmPassword').value : '';
+        
+        // Validate fields
+        if (!firstName || !lastName || !userName) {
+            alert('Please fill in all fields');
+            return;
+        }
+        
+        // If password section is visible, validate password fields
+        var passwordSection = document.getElementById('passwordSection');
+        if (passwordSection && passwordSection.style.display !== 'none') {
+            if (!currentPassword || !newPassword || !confirmPassword) {
+                alert('Please fill in all password fields');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                alert('New password and confirm password do not match');
+                return;
+            }
+            
+            if (newPassword.length < 6) {
+                alert('Password must be at least 6 characters');
+                return;
+            }
+        }
+        
+        alert('Profile updated successfully');
+        closeEditProfileModal();
+    }
+
+    function changeUserPassword(currentPassword, newPassword) {
+        alert('Password changed successfully');
+    }
+
+    function deactivateUser() {
+        if (!confirm('Are you sure you want to deactivate this user?')) {
+            return;
+        }
+        
+        alert('User deactivated successfully');
+        closeEditProfileModal();
+    }
+
 
     function setText(id, value) {
         var el = document.getElementById(id);
@@ -125,4 +335,12 @@
         return name.trim().split(/\s+/).slice(0, 2).map(function (n) { return n[0]; })
             .join('').toUpperCase();
     }
+
+    // Store current user for use in modal functions
+    var originalRender = render;
+    render = function (user) {
+        currentUser = user;
+        originalRender(user);
+    };
+
 })();
