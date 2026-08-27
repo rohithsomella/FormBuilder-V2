@@ -120,6 +120,87 @@
         </div>
     </div>
 
+    <!-- Edit Profile Modal -->
+    <div class="modal-overlay" id="editProfileOverlay"></div>
+    <div class="edit-profile-modal" id="editProfileModal">
+        <div class="modal-header">
+            <h3 id="editModalTitle">-</h3>
+        </div>
+
+        <form id="editProfileForm">
+            <div class="form-row">
+                <div class="form-group">
+                    <label>FIRST NAME</label>
+                    <div class="input-with-icon">
+                        <input type="text" id="editFirstName" placeholder="Enter first name" />
+                        <button type="button" class="icon-btn edit-icon" id="toggleEditFirstName" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>LAST NAME</label>
+                    <div class="input-with-icon">
+                        <input type="text" id="editLastName" placeholder="Enter last name" />
+                        <button type="button" class="icon-btn edit-icon" id="toggleEditLastName" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="form-row-with-button">
+                <div class="form-group">
+                    <label>USERNAME</label>
+                    <div class="input-with-icon">
+                        <input type="text" id="editUserName" placeholder="Enter username" />
+                        <button type="button" class="icon-btn verify-btn" id="verifyUsername" title="Verify" disabled>
+                            Verify
+                        </button>
+                        <button type="button" class="icon-btn edit-icon" id="toggleEditUserName" title="Edit">
+                            <i class="bi bi-pencil"></i>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-row-with-button-actions">
+                    <button type="button" class="btn-change-password" id="btnChangePassword">
+                        Change Password
+                    </button>
+                    <button type="button" class="btn-deactivate-user" id="btnDeactivateUser">
+                        Deactive Account
+                    </button>
+                </div>
+            </div>
+
+            <!-- Password Fields Section -->
+            <div class="password-section" id="passwordSection" style="display: none;">
+                <div class="password-divider">
+                    <span>Change Password</span>
+                </div>
+                
+                <div class="form-group">
+                    <label>CURRENT PASSWORD</label>
+                    <input type="password" id="currentPassword" placeholder="Enter current password" />
+                </div>
+
+                <div class="form-group">
+                    <label>NEW PASSWORD</label>
+                    <input type="password" id="newPassword" placeholder="Enter new password" />
+                </div>
+
+                <div class="form-group">
+                    <label>CONFIRM PASSWORD</label>
+                    <input type="password" id="confirmPassword" placeholder="Confirm new password" />
+                </div>
+            </div>
+
+            <div class="modal-footer">
+                <button type="button" class="btn-cancel" id="cancelEditProfile">Cancel</button>
+                <button type="submit" class="btn-save">Save</button>
+            </div>
+        </form>
+    </div>
+
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/js/bootstrap.bundle.min.js"></script>
     <script src="../js/CommonItems.js"></script>
