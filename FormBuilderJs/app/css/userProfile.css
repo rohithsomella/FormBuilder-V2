@@ -131,7 +131,7 @@ html, body {
     word-break: break-word;
 }
 
-/* Bottom Grid for Email & User ID */
+/* Bottom Grid for Email & Username */
 .bottom-fields-grid {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -366,10 +366,12 @@ html, body {
     background: #ffffff;
 }
 
+/* A locked field is read-only, not broken, so it gets the plain arrow rather than the
+   "no entry" cursor - same as .edit-field.locked .modal-input on User Details. */
 .form-group input:disabled {
     background-color: #f5f7fb;
     color: #1e293b;
-    cursor: not-allowed;
+    cursor: default;
     border-color: #e2e8f0;
 }
 
@@ -380,6 +382,13 @@ html, body {
 .form-group input:-webkit-autofill:active {
     -webkit-box-shadow: 0 0 0 30px #f5f7fb inset !important;
     -webkit-text-fill-color: #1e293b !important;
+}
+
+/* Unlocking a field is what turns it white, not focusing it. Keying this off :focus
+   would send the field back to grey the moment the user clicked anywhere else, which
+   reads as locked again even though the pencil is still lit. */
+.input-with-icon input:enabled {
+    background-color: #ffffff;
 }
 
 /* Input with Icon Container */
@@ -417,55 +426,69 @@ html, body {
     color: #1e293b;
 }
 
+/* The pencil unlocks its field, so it behaves exactly like .btn-field-edit in the
+   User Details edit dialog: outline while the field is locked, solid purple while it
+   is unlocked for editing. Same colours as that button. */
 .edit-icon {
     width: 32px;
     height: 32px;
     padding: 6px;
-    color: #64748b;
-    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #5f5de8;
+    border: 1px solid #ddd;
     border-radius: 4px;
+    transition: background 0.15s, border-color 0.15s;
 }
 
 .edit-icon:hover {
-    background: #f5f7fb;
-    color: #6c5ce7;
-    border-color: #6c5ce7;
+    background: #f0f0fc;
+    color: #5f5de8;
+    border-color: #5f5de8;
+}
+
+/* Read off the input's own disabled flag - the same thing toggleInputEdit() flips -
+   so the button can never disagree with whether the field is really editable. The
+   general sibling combinator also clears the Verify button on the username row. */
+.input-with-icon input:enabled ~ .edit-icon {
+    background: #5f5de8;
+    border-color: #5f5de8;
+    color: #ffffff;
 }
 
 .edit-icon i {
     font-size: 16px;
 }
 
+/* Same style as .btn-verify in the User Details edit dialog, including the fixed
+   height and no-grow sizing that keeps the input holding the slack on this row. */
 .verify-btn {
-    padding: 8px 16px;
-    background: #6c5ce7;
+    flex: none;
+    height: 38px;
+    padding: 0 14px;
+    background: #5f5de8;
     color: #ffffff;
     font-weight: 600;
-    font-size: 12px;
-    border-radius: 4px;
-    width: auto;
-    min-width: 70px;
+    font-size: 13px;
     border: none;
+    border-radius: 4px;
     white-space: nowrap;
-    flex-shrink: 0;
+    cursor: pointer;
 }
 
+/* The button is also an .icon-btn, whose hover rule darkens the text. Restate the
+   colour here so the label stays white in every state. */
 .verify-btn:hover {
-    background: #5f47d9;
+    background: #4a47c9;
+    color: #ffffff;
 }
 
-.verify-btn:active {
-    transform: scale(0.98);
-}
-
-.verify-btn:disabled {
-    background: #ddd6fe;
+/* There is nothing to verify while the username cannot be typed in, so the disabled
+   state keeps the "no entry" cursor - the field itself is what got the plain arrow. */
+.verify-btn:disabled,
+.verify-btn:disabled:hover {
+    background: #c5c4f0;
     color: #ffffff;
     cursor: not-allowed;
-}
-
-.verify-btn:disabled:hover {
-    background: #ddd6fe;
 }
 
 /* Change Password Button */

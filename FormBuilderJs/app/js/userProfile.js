@@ -50,7 +50,6 @@
         setText('fieldName', user.name || user.userName || '-');
         setText('fieldRole', (user.role || 'User').toUpperCase());
         setText('fieldEmail', user.email || '-');
-        setText('fieldUserId', user.userId || '-');
         setText('fieldUserName', user.userName || '-');
 
         // Admin page only: prove the Admin role really is honoured by the API rather
