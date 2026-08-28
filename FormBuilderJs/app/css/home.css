@@ -53,7 +53,12 @@ body {
 .menu-options {
     display: grid;
 
-    grid-template-columns: repeat(4, 1fr);
+    /*
+     * Cards never squeeze below a readable width. When the row runs out of room a
+     * card drops to the next row instead of every card being pinched narrow and
+     * stretched tall.
+     */
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
 
     gap: 30px;
 }
@@ -185,6 +190,59 @@ body {
 
 .reports::after {
     background: #ffd7a8;
+}
+
+/*
+ * Laptop - 14" screens at 100% zoom.
+ *
+ * The desktop sizes above are built for a wide monitor; at ~1280-1600px they push
+ * the page well past the fold and force the titles to wrap over three lines, which
+ * is what stretched the cards vertically. Scaling the type and spacing down keeps
+ * the cards wide-and-short and the whole page inside one screen.
+ */
+@media (max-width:1600px)
+{
+    .home-container{
+        padding:30px 40px;
+    }
+
+    .home-header{
+        margin-bottom:24px;
+    }
+
+    .home-header h1{
+        font-size:44px;
+    }
+
+    .home-header p{
+        font-size:18px;
+    }
+
+    .menu-options{
+        gap:22px;
+    }
+
+    .menu-card{
+        padding:26px 22px;
+        min-height:190px;
+    }
+
+    .card-icon{
+        width:64px;
+        height:64px;
+        margin-bottom:16px;
+        font-size:28px;
+    }
+
+    .card-title{
+        font-size:21px;
+        margin-bottom:10px;
+    }
+
+    .card-description{
+        font-size:15px;
+        line-height:1.5;
+    }
 }
 
 /* Tablet */
